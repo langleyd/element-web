@@ -11,7 +11,7 @@ Please see LICENSE files in the repository root for full details.
     box-sizing: border-box;
     padding: 0 var(--cpd-space-3x) 0 calc(var(--cpd-space-3x) + var(--cpd-space-1-5x));
     border-bottom: 1px solid $separator;
-    background-color: $background;
+    background-color: $room-header-bg;
     transition: all 0.2s ease;
 
     button:has(svg.mx_RoomHeader_toggled) {
@@ -21,7 +21,7 @@ Please see LICENSE files in the repository root for full details.
 }
 
 .mx_RoomHeader:hover {
-    background-color: $header-panel-bg-hover;
+    background-color: $room-header-bg-hover;
 }
 
 .mx_RoomHeader_infoWrapper {
@@ -80,7 +80,7 @@ Please see LICENSE files in the repository root for full details.
 
 .mx_RoomHeader .mx_FacePile {
     color: $secondary-content;
-    background: $background;
+    background: $room-header-bg;
     display: flex;
     align-items: center;
     gap: var(--cpd-space-2x);
