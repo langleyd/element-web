@@ -59,6 +59,7 @@ import { type ViewRoomPayload } from "../../dispatcher/payloads/ViewRoomPayload"
 import { getKeyBindingsManager } from "../../KeyBindingsManager";
 import { KeyBindingAction } from "../../accessibility/KeyboardShortcuts";
 import { haveRendererForEvent } from "../../events/EventTileFactory";
+import { SDKContextClass } from "../../contexts/SDKContextClass";
 
 // These pagination sizes are higher than they may possibly need be
 // once https://github.com/matrix-org/matrix-spec-proposals/pull/3874 lands
@@ -291,8 +292,29 @@ class TimelinePanel extends React.Component<IProps, IState> {
         };
     }
 
+    private unsubscribeSelection?: () => void;
+    private wasSelecting = false;
+
+    /**
+     * Whether this timeline is in selection mode: a room's main timeline or a thread's, never a filtered one
+     * such as the file panel.
+     */
+    private isSelecting(): boolean {
+        const { timelineSet } = this.props;
+        const room = timelineSet.room;
+        if (!room) return false;
+        const store = SDKContextClass.instance.messageSelectionStore;
+        if (timelineSet.thread) return store.isActiveFor(room.roomId, timelineSet.thread.id);
+        return timelineSet === room.getUnfilteredTimelineSet() && store.isActiveFor(room.roomId, null);
+    }
+
+    private readonly onSelectionChange = (): void => {
+        if (this.isSelecting() !== this.wasSelecting) this.forceUpdate();
+    };
+
     public componentDidMount(): void {
         this.unmounted = false;
+        this.unsubscribeSelection = SDKContextClass.instance.messageSelectionStore.subscribe(this.onSelectionChange);
 
         this.dispatcherRef = dis.register(this.onAction);
         const cli = MatrixClientPeg.safeGet();
@@ -365,6 +387,7 @@ class TimelinePanel extends React.Component<IProps, IState> {
         //
         // (We could use isMounted, but facebook have deprecated that.)
         this.unmounted = true;
+        this.unsubscribeSelection?.();
         if (this.readReceiptActivityTimer) {
             this.readReceiptActivityTimer.abort();
             this.readReceiptActivityTimer = null;
@@ -1854,7 +1877,11 @@ class TimelinePanel extends React.Component<IProps, IState> {
         // forwards, otherwise if somebody hits the bottom of the loaded
         // events when viewing historical messages, we get stuck in a loop
         // of paginating our way through the entire history of the room.
-        const stickyBottom = !this.timelineWindow?.canPaginate(EventTimeline.FORWARDS);
+        //
+        // In selection mode, arriving messages must not move the view either.
+        const selecting = this.isSelecting();
+        this.wasSelecting = selecting;
+        const stickyBottom = !selecting && !this.timelineWindow?.canPaginate(EventTimeline.FORWARDS);
 
         // If the state is PREPARED or CATCHUP, we're still waiting for the js-sdk to sync with
         // the HS and fetch the latest events, so we are effectively forward paginating.
@@ -1877,6 +1904,7 @@ class TimelinePanel extends React.Component<IProps, IState> {
                 showReadReceipts={this.props.showReadReceipts}
                 ourUserId={MatrixClientPeg.safeGet().getSafeUserId()}
                 stickyBottom={stickyBottom}
+                selectionListLabel={selecting ? _t("timeline|selection|list_label") : undefined}
                 onScroll={this.onMessageListScroll}
                 onFillRequest={this.onMessageListFillRequest}
                 onUnfillRequest={this.onMessageListUnfillRequest}

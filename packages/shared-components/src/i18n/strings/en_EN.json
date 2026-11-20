@@ -13,6 +13,7 @@
         "download": "Download",
         "edit": "Edit",
         "explore_rooms": "Explore rooms",
+        "forward": "Forward",
         "go": "Go",
         "hide": "Hide",
         "invite": "Invite",
@@ -159,6 +160,13 @@
         "jump_to_date_prompt": "Pick a date to scroll to",
         "knock_sent": "Request to join sent",
         "pinned_message_badge": "Pinned message",
+        "selection_bar": {
+            "count": {
+                "one": "%(count)s selected",
+                "other": "%(count)s selected"
+            },
+            "label": "Selected messages"
+        },
         "status_bar": {
             "contact_account_provider": "Contact account provider",
             "delete_all": "Delete all",

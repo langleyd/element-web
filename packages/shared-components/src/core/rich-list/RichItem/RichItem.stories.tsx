@@ -50,6 +50,12 @@ export const Selected: Story = {
     },
 };
 
+export const Disabled: Story = {
+    args: {
+        disabled: true,
+    },
+};
+
 export const WithoutTimestamp: Story = {
     args: {
         timestamp: undefined,

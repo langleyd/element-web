@@ -8,6 +8,8 @@
 import React, { type HTMLAttributes, type JSX, memo } from "react";
 import CheckIcon from "@vector-im/compound-design-tokens/assets/web/icons/check";
 
+import classNames from "classnames";
+
 import styles from "./RichItem.module.css";
 import { Flex } from "../../utils/Flex";
 import { useI18n } from "../../i18n/i18nContext";
@@ -36,6 +38,12 @@ export interface RichItemProps extends HTMLAttributes<HTMLLIElement> {
      * @default false
      */
     selected?: boolean;
+    /**
+     * Whether the item can't be chosen right now, for example because a limit is reached.
+     * It stays in the list and is announced as unavailable; clicks do nothing.
+     * @default false
+     */
+    disabled?: boolean;
 }
 
 /**
@@ -61,17 +69,21 @@ export const RichItem = memo(function RichItem({
     description,
     timestamp,
     selected,
+    disabled,
+    onClick,
     ...props
 }: RichItemProps): JSX.Element {
     const i18n = useI18n();
 
     return (
         <li
-            className={styles.richItem}
+            className={classNames(styles.richItem, { [styles.disabled]: disabled })}
             role="option"
             tabIndex={-1}
             aria-selected={selected}
+            aria-disabled={disabled || undefined}
             aria-label={title}
+            onClick={disabled ? undefined : onClick}
             {...props}
         >
             {selected ? <Checkmark /> : <Flex className={styles.avatar}>{avatar}</Flex>}

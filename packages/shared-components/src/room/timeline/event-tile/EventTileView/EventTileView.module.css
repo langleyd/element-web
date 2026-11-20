@@ -1859,3 +1859,53 @@
         padding-block-start: var(--event-tile-file-separator-spacing);
     }
 }
+
+/* Selection mode: a checkbox column before the tile, the whole tile is the click target. */
+.root.selectionMode {
+    --event-tile-selection-gutter: 40px;
+    --event-tile-selection-offset: var(--event-tile-selection-gutter);
+    --event-tile-selection-background: var(--cpd-color-bg-subtle-secondary);
+
+    margin-inline-start: var(--event-tile-selection-gutter);
+    border-radius: 0 var(--cpd-space-2x) var(--cpd-space-2x) 0;
+    cursor: pointer;
+
+    &.layoutBubble {
+        --event-tile-selection-offset: calc(
+            var(--event-tile-bubble-margin-inline-start) + var(--event-tile-selection-gutter)
+        );
+
+        margin-inline-start: var(--event-tile-selection-offset);
+    }
+
+    &.selectionUnavailable {
+        cursor: default;
+    }
+
+    /* The selected mark is the ticked checkbox plus a tint over the whole row, checkbox column included. */
+    &.selectionSelected {
+        background-color: var(--event-tile-selection-background);
+        box-shadow: calc(-1 * var(--event-tile-selection-offset)) 0 0 0 var(--event-tile-selection-background);
+    }
+
+    /* Keyboard focus is an outline, so it looks different from the selected tint. */
+    &:focus-visible {
+        outline: 2px solid var(--cpd-color-border-focused);
+        outline-offset: -2px;
+    }
+}
+
+.selectionCheckbox {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: calc(-1 * var(--event-tile-selection-offset));
+    width: var(--event-tile-selection-gutter);
+    box-sizing: border-box;
+    /* Line the box up with the first line of the tile, whatever the layout's top padding. */
+    padding-block-start: inherit;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    /* Clicks go to the tile, which owns the toggle. */
+    pointer-events: none;
+}

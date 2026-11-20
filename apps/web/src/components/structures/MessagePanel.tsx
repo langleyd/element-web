@@ -158,6 +158,9 @@ interface IProps {
     // for more details.
     stickyBottom?: boolean;
 
+    // when set, the timeline is in selection mode: the list is a multi-select listbox with this name
+    selectionListLabel?: string;
+
     // className for the panel
     className?: string;
 
@@ -1000,6 +1003,7 @@ export default class MessagePanel extends React.Component<IProps, IState> {
                     style={style}
                     stickyBottom={this.props.stickyBottom}
                     fixedChildren={ircResizer}
+                    selectionListLabel={this.props.selectionListLabel}
                 >
                     {topSpinner}
                     {this.getEventTiles()}

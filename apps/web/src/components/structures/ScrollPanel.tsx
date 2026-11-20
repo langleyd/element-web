@@ -62,6 +62,11 @@ interface IProps {
      * of the wrapper
      */
     fixedChildren?: ReactNode;
+
+    /* selectionListLabel: when set, the list is in selection mode and becomes a multi-select listbox
+     * with this accessible name. Its tiles are the options.
+     */
+    selectionListLabel?: string;
     children?: ReactNode;
 
     /* onFillRequest(backwards): a callback which is called on scroll when
@@ -199,7 +204,7 @@ export default class ScrollPanel extends React.Component<IProps> {
         this.checkScroll();
     }
 
-    public componentDidUpdate(): void {
+    public componentDidUpdate(prevProps: Readonly<IProps>): void {
         // after adding event tiles, we may need to tweak the scroll (either to
         // keep at the bottom of the timeline, or to maintain the view after
         // adding events to the top).
@@ -207,6 +212,9 @@ export default class ScrollPanel extends React.Component<IProps> {
         // This will also re-check the fill state, in case the pagination was inadequate
         this.checkScroll(true);
         this.updatePreventShrinking();
+        // When stickiness changes (selection mode turns it off), anchor the view where it now is,
+        // so that arriving messages don't move it.
+        if (prevProps.stickyBottom !== this.props.stickyBottom) this.saveScrollState();
     }
 
     public componentWillUnmount(): void {
@@ -946,7 +954,17 @@ export default class ScrollPanel extends React.Component<IProps> {
             >
                 {this.props.fixedChildren}
                 <div className="mx_RoomView_messageListWrapper">
-                    <ol ref={this.itemlist} className="mx_RoomView_MessageList" aria-live="polite">
+                    <ol
+                        ref={this.itemlist}
+                        className="mx_RoomView_MessageList"
+                        {...(this.props.selectionListLabel
+                            ? {
+                                  "role": "listbox",
+                                  "aria-multiselectable": true,
+                                  "aria-label": this.props.selectionListLabel,
+                              }
+                            : { "aria-live": "polite" })}
+                    >
                         {this.props.children}
                     </ol>
                 </div>

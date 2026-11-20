@@ -16,4 +16,6 @@ export type {
     EventTileViewRoot,
     EventTileViewRootState,
     EventTileViewSlots,
+    EventTileSelectionState,
+    EventTileViewSelection,
 } from "./EventTileView.types";

@@ -232,6 +232,7 @@ export interface Settings {
     "feature_render_reaction_images": IFeature;
     "feature_retention": IFeature;
     "feature_new_timeline": IFeature;
+    "feature_multi_select_forward": IFeature;
     "feature_ask_to_join": IFeature;
     "feature_notifications": IFeature;
     "feature_user_status": IFeature;
@@ -483,6 +484,16 @@ export const SETTINGS: Settings = {
         supportedLevels: LEVELS_DEVICE_ONLY_SETTINGS_WITH_CONFIG_PRIORITISED,
         supportedLevelsAreOrdered: true,
         default: false,
+    },
+    "feature_multi_select_forward": {
+        isFeature: true,
+        labsGroup: LabGroup.Messaging,
+        displayName: _td("labs|multi_select_forward"),
+        description: _td("labs|multi_select_forward_description"),
+        supportedLevels: LEVELS_DEVICE_ONLY_SETTINGS_WITH_CONFIG_PRIORITISED,
+        supportedLevelsAreOrdered: true,
+        // Prototype: on by default so the preview shows the new flow. The real change ships it off.
+        default: true,
     },
     "feature_strip_upload_metadata": {
         isFeature: true,

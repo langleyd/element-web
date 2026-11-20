@@ -7,6 +7,7 @@
 
 import React, { type JSX } from "react";
 import classNames from "classnames";
+import { CheckboxInput } from "@vector-im/compound-web";
 
 import { useEventPresentation } from "../../EventPresentation";
 import type { EventTileViewClassNames, EventTileViewProps, EventTileViewSlots } from "./EventTileView.types";
@@ -35,9 +36,12 @@ export function EventTileView({
     onContextMenu,
     onPermalinkClick,
     onPermalinkContextMenu,
+    selection,
 }: Readonly<EventTileViewProps>): JSX.Element {
     const Root = root.as ?? "li";
     const { layout, density } = useEventPresentation();
+    // While selecting, the tile's content is inert: it can't be clicked or focused, and the tile is the option.
+    const inert = selection ? true : undefined;
     const isRenderableSlot = (content: React.ReactNode): boolean =>
         content !== null && content !== undefined && typeof content !== "boolean";
 
@@ -70,6 +74,7 @@ export function EventTileView({
                 key={slotName}
                 data-testid={`event-tile-slot-${slotName}`}
                 className={classNames(style, classNameOverrides?.[className])}
+                inert={inert}
             >
                 {content}
             </div>
@@ -87,6 +92,27 @@ export function EventTileView({
         [styles.lineEmote]: lineState?.emote,
         [styles.lineImage]: lineState?.image,
     });
+
+    const selectionProps: React.HTMLAttributes<HTMLElement> = selection
+        ? {
+              "role": "option",
+              "aria-selected": selection.state === "selected",
+              "aria-disabled": selection.state === "unavailable" ? true : undefined,
+              "aria-label": selection.label,
+              "aria-live": undefined,
+              "aria-atomic": undefined,
+              "onKeyDown": selection.onKeyDown,
+          }
+        : {};
+
+    const renderSelectionCheckbox = (): React.ReactNode =>
+        selection && (
+            <div className={styles.selectionCheckbox} aria-hidden="true" data-testid="event-tile-selection-checkbox">
+                {selection.state !== "unavailable" && (
+                    <CheckboxInput checked={selection.state === "selected"} readOnly tabIndex={-1} />
+                )}
+            </div>
+        );
 
     const renderRoot = (
         children: React.ReactNode,
@@ -125,19 +151,25 @@ export function EventTileView({
                 [styles.shapeSearch]: root.shape === "Search",
                 [styles.shapeFile]: root.shape === "File",
                 [styles.shapeNotification]: root.shape === "Notification",
+                [styles.selectionMode]: !!selection,
+                [styles.selectionSelected]: selection?.state === "selected",
+                [styles.selectionUnavailable]: selection?.state === "unavailable",
             })}
             aria-live={root.ariaLive}
             aria-atomic={true}
             data-scroll-tokens={root.scrollToken}
             data-event-id={root.eventId}
             data-testid="event-tile"
-            tabIndex={rootTabIndex}
+            data-selection-state={selection?.state}
+            tabIndex={selection ? (selection.tabbable ? 0 : -1) : rootTabIndex}
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
             onFocus={onFocus}
             onBlur={onBlur}
-            onClick={rootClickHandler}
+            onClick={selection ? selection.onToggle : rootClickHandler}
+            {...selectionProps}
         >
+            {renderSelectionCheckbox()}
             {children}
         </Root>
     );
@@ -146,10 +178,10 @@ export function EventTileView({
     if (root.shape === "Thread") {
         return renderRoot(
             <>
-                <div className={classNames(styles.senderDetails, classNameOverrides?.senderDetails)}>
+                <div className={classNames(styles.senderDetails, classNameOverrides?.senderDetails)} inert={inert}>
                     {renderSlots("avatar", "sender")}
                 </div>
-                <div id={root.id} data-testid="event-tile-line" className={lineClassName} onContextMenu={onContextMenu}>
+                <div id={root.id} data-testid="event-tile-line" inert={inert} className={lineClassName} onContextMenu={onContextMenu}>
                     {renderSlots("contextMenu", "replyChain", "body", "actionBar", "timestamp", "receipt")}
                 </div>
                 {renderSlot("footer")}
@@ -162,11 +194,11 @@ export function EventTileView({
     if (root.shape === "Notification") {
         return renderRoot(
             <>
-                <div className={classNames(styles.details, classNameOverrides?.details)}>
+                <div className={classNames(styles.details, classNameOverrides?.details)} inert={inert}>
                     {renderSlots("sender", "notificationRoomLabel", "timestamp", "notificationBadge")}
                 </div>
                 {slots.roomAvatar ? renderSlot("roomAvatar") : renderSlot("avatar")}
-                <div id={root.id} data-testid="event-tile-line" className={lineClassName}>
+                <div id={root.id} data-testid="event-tile-line" inert={inert} className={lineClassName}>
                     {renderSlots("body", "threadInfo")}
                 </div>
                 {renderSlot("receipt")}
@@ -180,11 +212,11 @@ export function EventTileView({
     if (root.shape === "ThreadsList") {
         return renderRoot(
             <>
-                <div className={classNames(styles.details, classNameOverrides?.details)}>
+                <div className={classNames(styles.details, classNameOverrides?.details)} inert={inert}>
                     {renderSlots("sender", "notificationRoomLabel", "timestamp", "notificationBadge")}
                 </div>
                 {renderSlot("avatar")}
-                <div id={root.id} data-testid="event-tile-line" className={lineClassName}>
+                <div id={root.id} data-testid="event-tile-line" inert={inert} className={lineClassName}>
                     {renderSlots("body", "threadInfo")}
                 </div>
                 {renderSlot("actionBar")}
@@ -203,6 +235,7 @@ export function EventTileView({
                     className={classNames(styles.senderDetailsLink, classNameOverrides?.senderDetailsLink)}
                     href={root.permalink ?? "#"}
                     onClick={onPermalinkClick}
+                    inert={inert}
                 >
                     <div
                         className={classNames(styles.senderDetails, classNameOverrides?.senderDetails)}
@@ -211,7 +244,7 @@ export function EventTileView({
                         {renderSlots("avatar", "sender", "timestamp")}
                     </div>
                 </a>
-                <div id={root.id} data-testid="event-tile-line" className={lineClassName} onContextMenu={onContextMenu}>
+                <div id={root.id} data-testid="event-tile-line" inert={inert} className={lineClassName} onContextMenu={onContextMenu}>
                     {renderSlots("contextMenu", "body")}
                 </div>
             </>,
@@ -226,7 +259,7 @@ export function EventTileView({
         return renderRoot(
             <>
                 {renderSlots("timestamp", "padlock", "avatar", "sender")}
-                <div id={root.id} data-testid="event-tile-line" className={lineClassName} onContextMenu={onContextMenu}>
+                <div id={root.id} data-testid="event-tile-line" inert={inert} className={lineClassName} onContextMenu={onContextMenu}>
                     {renderSlots("contextMenu", "replyChain", "body", "actionBar", "footer", "threadInfo")}
                 </div>
                 {renderSlot("receipt")}
@@ -240,7 +273,7 @@ export function EventTileView({
     return renderRoot(
         <>
             {renderSlots("sender", "avatar")}
-            <div id={root.id} data-testid="event-tile-line" className={lineClassName} onContextMenu={onContextMenu}>
+            <div id={root.id} data-testid="event-tile-line" inert={inert} className={lineClassName} onContextMenu={onContextMenu}>
                 {renderSlots("contextMenu", "timestamp", "padlock", "replyChain", "body", "actionBar")}
             </div>
             {renderSlots("footer", "threadInfo", "receipt")}

@@ -33,6 +33,7 @@ import SettingController from "../settings/controllers/SettingController.ts";
 import { CallStore } from "../stores/CallStore";
 import { LatestRtcNotificationEventStore } from "../stores/LatestRtcNotificationEventStore";
 import { DocumentPipStore } from "../stores/DocumentPipStore";
+import { MessageSelectionStore } from "../stores/MessageSelectionStore";
 
 /**
  * A class which (mostly) lazily initialises stores as and when they are requested, ensuring they remain
@@ -78,6 +79,7 @@ export class SDKContextClass {
     protected _CallStore?: CallStore;
     protected _LatestRtcNotificationEventStore?: LatestRtcNotificationEventStore;
     protected _DocumentPipStore?: DocumentPipStore;
+    protected _MessageSelectionStore?: MessageSelectionStore;
 
     // Kept so that test contexts can stop listening to the dispatcher
     protected dispatcherRef?: string;
@@ -230,7 +232,13 @@ export class SDKContextClass {
         return this._DocumentPipStore;
     }
 
+    public get messageSelectionStore(): MessageSelectionStore {
+        this._MessageSelectionStore ??= new MessageSelectionStore();
+        return this._MessageSelectionStore;
+    }
+
     public onLoggedOut(): void {
+        this._MessageSelectionStore?.end();
         this._UserProfilesStore = undefined;
         this._client = undefined;
     }

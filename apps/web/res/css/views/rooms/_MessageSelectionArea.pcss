@@ -1,0 +1,30 @@
+/*
+ * Copyright 2026 Element Creations Ltd.
+ *
+ * SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+ * Please see LICENSE files in the repository root for full details.
+ */
+
+/* Selection notices sit just above the composer or selection bar, centred, over the timeline. */
+.mx_MessageSelectionArea_notice {
+    position: relative;
+    height: 0;
+    z-index: 10;
+
+    > * {
+        position: absolute;
+        inset-block-end: var(--cpd-space-3x);
+        inset-inline-start: 50%;
+        transform: translateX(-50%);
+        white-space: nowrap;
+    }
+}
+
+.mx_MessageSelectionArea_announcer {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}

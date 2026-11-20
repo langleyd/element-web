@@ -28,6 +28,8 @@ export interface RoomOfRoomPickerView {
     timestamp?: number;
     /** Indicates if the room is currently selected. */
     selected: boolean;
+    /** Indicates if the room can't be selected right now, for example because a limit is reached. */
+    disabled?: boolean;
 }
 
 export interface RoomPickerViewSnapshot {
@@ -122,6 +124,7 @@ export function RoomPickerView({ vm, className }: Readonly<RoomPickerViewProps>)
                             timestamp={room.timestamp}
                             avatar={vm.renderRoomAvatar(room, "32px")}
                             selected={room.selected}
+                            disabled={room.disabled}
                             onClick={() => {
                                 vm.toggleRoom(room.id);
 

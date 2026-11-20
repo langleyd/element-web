@@ -71,6 +71,7 @@ import { type OpenForwardDialogPayload } from "../../../dispatcher/payloads/Open
 import { type OpenReportEventDialogPayload } from "../../../dispatcher/payloads/OpenReportEventDialogPayload";
 import { createMapSiteLinkFromEvent } from "../../../utils/location";
 import { getForwardableEvent } from "../../../events/forward/getForwardableEvent";
+import { startForwardSelection } from "../../../events/forward/startForwardSelection";
 import { getShareableLocationEvent } from "../../../events/location/getShareableLocationEvent";
 import { type ShowThreadPayload } from "../../../dispatcher/payloads/ShowThreadPayload";
 import { CardContext } from "../right_panel/context";
@@ -269,6 +270,20 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
     };
 
     private onForwardClick = (forwardableEvent: MatrixEvent) => (): void => {
+        // Forward on a message in the timeline enters selection mode, unless the menu is inside a dialog
+        if (
+            !this.props.onCloseDialog &&
+            forwardableEvent === this.props.mxEvent &&
+            startForwardSelection(
+                MatrixClientPeg.safeGet(),
+                forwardableEvent,
+                this.context.timelineRenderingType,
+                this.context.threadId,
+            )
+        ) {
+            this.closeMenu();
+            return;
+        }
         dis.dispatch<OpenForwardDialogPayload>({
             action: Action.OpenForwardDialog,
             event: forwardableEvent,

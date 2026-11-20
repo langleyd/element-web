@@ -1286,6 +1286,22 @@
     "forward": {
         "filter_placeholder": "Search for rooms or people",
         "message_preview_heading": "Message preview",
+        "multi": {
+            "empty": "No chats found",
+            "from_thread": "They will arrive in the main chat, not in a thread.",
+            "limit": {
+                "one": "You can forward to up to %(count)s chat at a time.",
+                "other": "You can forward to up to %(count)s chats at a time."
+            },
+            "list_title": "Recent chats",
+            "search_placeholder": "Search chats",
+            "slow": "This may take a few minutes. You can keep chatting meanwhile.",
+            "summary": {
+                "one": "%(count)s message will be sent to %(chats)s.",
+                "other": "%(count)s messages will be sent to %(chats)s."
+            },
+            "title": "Forward to"
+        },
         "no_perms_title": "You don't have permission to do this",
         "open_room": "Open room",
         "send_label": "Send",
@@ -1576,6 +1592,8 @@
         "login_with_qr": "Log in with QR code",
         "mjolnir": "New ways to ignore people",
         "msc3531_hide_messages_pending_moderation": "Let moderators hide messages pending moderation.",
+        "multi_select_forward": "Forward several messages at once",
+        "multi_select_forward_description": "Choose Forward on a message to select up to 10 messages and send them to up to 5 chats.",
         "new_timeline": "Improved timeline scrolling and navigation",
         "notification_settings": "New Notification Settings",
         "notification_settings_beta_caption": "Introducing a simpler way to change your notification settings. Customize your %(brand)s, just the way you like.",
@@ -3618,6 +3636,23 @@
             "error_loading": "Can't load the message this replies to. It may not exist, or you may not have permission to see it.",
             "in_reply_to": "<a>In reply to</a> <pill>",
             "in_reply_to_for_export": "In reply to <a>this message</a>"
+        },
+        "selection": {
+            "count_a11y": {
+                "one": "%(count)s message selected",
+                "other": "%(count)s messages selected"
+            },
+            "entered": {
+                "one": "Selecting messages to forward. %(count)s message selected",
+                "other": "Selecting messages to forward. %(count)s messages selected"
+            },
+            "forwarded": {
+                "one": "%(count)s message forwarded",
+                "other": "%(count)s messages forwarded"
+            },
+            "left": "Stopped selecting messages",
+            "list_label": "Select messages to forward",
+            "maximum_selected": "Maximum messages selected"
         },
         "self_redaction": "Message deleted",
         "send_state_encrypting": "Encrypting your message…",

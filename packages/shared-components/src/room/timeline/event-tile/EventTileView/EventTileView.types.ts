@@ -170,6 +170,26 @@ export interface EventTileViewHandlers {
     onPermalinkContextMenu?: React.MouseEventHandler<HTMLElement>;
 }
 
+/** How a tile takes part in timeline selection mode. */
+export type EventTileSelectionState = "selected" | "unselected" | "unavailable";
+
+/**
+ * Selection mode state for a tile. When set, the tile is an option in a multi-select list: it shows a checkbox
+ * (unless it can't be selected), its content stops being interactive, and a click toggles it.
+ */
+export interface EventTileViewSelection {
+    /** Whether the tile is selected, can be selected, or can't be selected. */
+    state: EventTileSelectionState;
+    /** Accessible name for the tile, as its content is not interactive while selecting. */
+    label: string;
+    /** Whether the tile is the list's tab stop (roving tabindex). */
+    tabbable: boolean;
+    /** Click anywhere on the tile. */
+    onToggle: React.MouseEventHandler<HTMLElement>;
+    /** Keyboard handling for the list (arrows, Space, Escape). */
+    onKeyDown: React.KeyboardEventHandler<HTMLElement>;
+}
+
 /** Props for the shared EventTile shell. */
 export interface EventTileViewProps extends EventTileViewHandlers {
     /** Pure root render state. */
@@ -182,4 +202,6 @@ export interface EventTileViewProps extends EventTileViewHandlers {
     slots: EventTileViewSlots;
     /** DOM refs supplied by the application layer. */
     refs?: EventTileViewRefs;
+    /** Selection mode state; omitted outside selection mode. */
+    selection?: EventTileViewSelection;
 }

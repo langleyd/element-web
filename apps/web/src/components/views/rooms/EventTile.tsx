@@ -35,6 +35,7 @@ import {
     useCreateAutoDisposedViewModel,
     TileErrorView,
     type EventTileRenderingMode,
+    type EventTileViewSelection,
 } from "@element-hq/web-shared-components";
 import { copyPlainTextToClipboard } from "@element-hq/element-web-shared-utils";
 
@@ -115,6 +116,10 @@ import { EventTileE2eViewModel } from "../../../viewmodels/room/timeline/event-t
 import { shouldHighlightEventTile } from "../../../viewmodels/room/timeline/event-tile/EventTileHighlightState";
 import { shouldHideEventTile } from "../../../viewmodels/room/timeline/event-tile/EventTileVisibilityState";
 import { UnreadNotificationBadgeViewModel } from "../../../viewmodels/room/notification-badge/UnreadNotificationBadgeViewModel";
+import { SDKContextClass } from "../../../contexts/SDKContextClass";
+import { isSelectableForForward } from "../../../events/forward/isSelectableForForward";
+import { textForEvent } from "../../../TextForEvent";
+import { onSelectionTileKeyDown, registerSelectionTile } from "./MessageSelection/selectionKeyboard";
 
 /** Relation lookup type retained for EventTile consumers. */
 export type { GetRelationsForEvent } from "../../../viewmodels/room/timeline/event-tile/reactions/EventTileReactionState";
@@ -318,6 +323,8 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
 
     private readonly id = uniqueId();
     private staleHoverCheckActive = false;
+    private unsubscribeSelection?: () => void;
+    private selectionKey = "";
 
     public constructor(props: EventTileProps, context: React.ContextType<typeof RoomContext>) {
         super(props, context);
@@ -406,6 +413,9 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
 
         this.props.mxEvent.on(ThreadEvent.Update, this.updateThread);
 
+        this.unsubscribeSelection = SDKContextClass.instance.messageSelectionStore.subscribe(this.onSelectionChange);
+        registerSelectionTile(this.ref.current, this.props.mxEvent);
+
         void client.decryptEventIfNeeded(this.props.mxEvent);
 
         const room = client.getRoom(this.props.mxEvent.getRoomId());
@@ -426,6 +436,7 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
 
     public componentWillUnmount(): void {
         this.stopStaleHoverCheck();
+        this.unsubscribeSelection?.();
         const client = MatrixClientPeg.get();
         if (client) {
             client.removeListener(RoomEvent.Receipt, this.onRoomReceipt);
@@ -472,6 +483,7 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
         this.unreadNotificationBadgeViewModel?.setRoom(this.getPreviewRoom());
         this.unreadNotificationBadgeViewModel?.setThreadId(this.props.mxEvent.getId() ?? undefined);
         if (this.props.resizeObserver && this.ref.current) this.props.resizeObserver.observe(this.ref.current);
+        registerSelectionTile(this.ref.current, this.props.mxEvent);
 
         // Moving between edited messages can remount the editor without a reliable blur event.
         // Clear stale focus-derived action bar state when focus has actually left this tile.
@@ -698,6 +710,9 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
     };
 
     private readonly onFocusWithin = (event: FocusEvent<HTMLElement>): void => {
+        if (this.selectionKey && event.target === event.currentTarget) {
+            SDKContextClass.instance.messageSelectionStore.setFocused(this.props.mxEvent.getId()!);
+        }
         // Show the action toolbar for keyboard-visible focus, with what-input as a fallback signal.
         const target = event.target;
         const showActionBarFromFocus =
@@ -943,6 +958,53 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
         };
     }
 
+    /**
+     * This tile's part in timeline selection mode, or null when its timeline is not selecting.
+     * Only tiles in a room's main timeline, or in the thread being selected from, take part.
+     */
+    private getSelectionState(): Pick<EventTileViewSelection, "state" | "tabbable"> | null {
+        const { timelineRenderingType, threadId } = this.context;
+        if (this.props.forExport) return null;
+        if (timelineRenderingType !== TimelineRenderingType.Room && timelineRenderingType !== TimelineRenderingType.Thread) {
+            return null;
+        }
+        const store = SDKContextClass.instance.messageSelectionStore;
+        const tileThreadId = timelineRenderingType === TimelineRenderingType.Thread ? (threadId ?? null) : null;
+        if (!store.isActiveFor(this.props.mxEvent.getRoomId(), tileThreadId)) return null;
+
+        const { selectedIds, focusedEventId } = store.getSnapshot();
+        const eventId = this.props.mxEvent.getId()!;
+        const state = !isSelectableForForward(this.props.mxEvent)
+            ? "unavailable"
+            : selectedIds.has(eventId)
+              ? "selected"
+              : "unselected";
+        return { state, tabbable: focusedEventId === eventId };
+    }
+
+    private readonly onSelectionChange = (): void => {
+        const selection = this.getSelectionState();
+        const key = selection ? `${selection.state}:${selection.tabbable}` : "";
+        if (key !== this.selectionKey) this.forceUpdate();
+    };
+
+    private readonly onSelectionToggle = (ev: MouseEvent<HTMLElement>): void => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const store = SDKContextClass.instance.messageSelectionStore;
+        store.setFocused(this.props.mxEvent.getId()!);
+        store.toggle(this.props.mxEvent);
+    };
+
+    private readonly onSelectionKeyDown = (ev: React.KeyboardEvent<HTMLElement>): void => {
+        onSelectionTileKeyDown(ev, SDKContextClass.instance.messageSelectionStore, this.props.mxEvent);
+    };
+
+    private getSelectionLabel(): string {
+        const text = textForEvent(this.props.mxEvent, MatrixClientPeg.safeGet());
+        return text || (this.props.mxEvent.sender?.name ?? this.props.mxEvent.getSender() ?? "");
+    }
+
     private renderContextMenu(): ReactNode {
         if (!this.state.interaction.contextMenu) return null;
 
@@ -989,6 +1051,17 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
             );
         }
 
+        const selectionState = this.getSelectionState();
+        this.selectionKey = selectionState ? `${selectionState.state}:${selectionState.tabbable}` : "";
+        const selection: EventTileViewSelection | undefined = selectionState
+            ? {
+                  ...selectionState,
+                  label: this.getSelectionLabel(),
+                  onToggle: this.onSelectionToggle,
+                  onKeyDown: this.onSelectionKeyDown,
+              }
+            : undefined;
+
         const isRenderingNotification = eventTileSnapshot.event.isRenderingNotification;
         const isSeeingThroughMessageHiddenForModeration =
             eventTileSnapshot.event.isSeeingThroughMessageHiddenForModeration;
@@ -1018,7 +1091,7 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
                     onCopyLinkClick={this.onCopyLinkToThreadClick}
                     className="mx_ThreadActionBar"
                 />
-            ) : eventTileSnapshot.actionBar.show ? (
+            ) : eventTileSnapshot.actionBar.show && !selection ? (
                 <ActionBarAdapter
                     eventTileViewModel={this.viewModel}
                     mxEvent={this.props.mxEvent}
@@ -1189,8 +1262,9 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
                     roomAvatar,
                     notificationRoomLabel,
                     notificationBadge,
-                    contextMenu: this.renderContextMenu(),
+                    contextMenu: selection ? undefined : this.renderContextMenu(),
                 }}
+                selection={selection}
                 refs={{ root: this.ref }}
                 onMouseEnter={this.onMouseEnter}
                 onMouseLeave={this.onMouseLeave}

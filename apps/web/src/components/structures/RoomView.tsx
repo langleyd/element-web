@@ -99,6 +99,7 @@ import EditorStateTransfer from "../../utils/EditorStateTransfer";
 import ErrorDialog from "../views/dialogs/ErrorDialog";
 import UploadBar from "./UploadBar";
 import MessageComposer from "../views/rooms/MessageComposer";
+import { MessageSelectionArea } from "../views/rooms/MessageSelection/MessageSelectionArea";
 import JumpToBottomButton from "../views/rooms/JumpToBottomButton";
 import TopUnreadMessagesBar from "../views/rooms/TopUnreadMessagesBar";
 import { fetchInitialEvent } from "../../utils/EventUtils";
@@ -981,8 +982,21 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
         return isManuallyShown && widgets.length > 0;
     }
 
+    private unsubscribeSelection?: () => void;
+    private wasSelecting = false;
+
+    /** Whether this room's main timeline is in selection mode. */
+    private isSelecting(): boolean {
+        return this.context.messageSelectionStore.isActiveFor(this.state.room?.roomId, null);
+    }
+
+    private readonly onSelectionChange = (): void => {
+        if (this.isSelecting() !== this.wasSelecting) this.forceUpdate();
+    };
+
     public componentDidMount(): void {
         this.unmounted = false;
+        this.unsubscribeSelection = this.context.messageSelectionStore.subscribe(this.onSelectionChange);
 
         this.dispatcherRef = defaultDispatcher.register(this.onAction);
         if (this.context.client) {
@@ -1079,6 +1093,7 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
         //
         // (We could use isMounted, but facebook have deprecated that.)
         this.unmounted = true;
+        this.unsubscribeSelection?.();
 
         this.context.legacyCallHandler.removeListener(LegacyCallHandlerEvent.CallState, this.onCallState);
 
@@ -2520,7 +2535,10 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
             </AuxPanel>
         );
 
-        const pinnedMessageBanner = !this.props.hidePinnedMessageBanner && (
+        // Banners above the timeline are hidden while selecting messages, as on Element X
+        const selecting = this.isSelecting();
+        this.wasSelecting = selecting;
+        const pinnedMessageBanner = !this.props.hidePinnedMessageBanner && !selecting && (
             <PinnedMessageBanner room={this.state.room} permalinkCreator={this.permalinkCreator} />
         );
 
@@ -2533,13 +2551,15 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
             !this.state.search;
         if (showComposer) {
             messageComposer = (
-                <MessageComposer
-                    room={this.state.room}
-                    e2eStatus={this.state.e2eStatus}
-                    resizeNotifier={this.context.resizeNotifier}
-                    replyToEvent={this.state.replyToEvent}
-                    permalinkCreator={this.permalinkCreator}
-                />
+                <MessageSelectionArea roomId={this.state.room.roomId} threadId={null}>
+                    <MessageComposer
+                        room={this.state.room}
+                        e2eStatus={this.state.e2eStatus}
+                        resizeNotifier={this.context.resizeNotifier}
+                        replyToEvent={this.state.replyToEvent}
+                        permalinkCreator={this.permalinkCreator}
+                    />
+                </MessageSelectionArea>
             );
         }
 

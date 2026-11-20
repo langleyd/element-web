@@ -23,6 +23,7 @@ import BaseCard from "../views/right_panel/BaseCard";
 import { RightPanelPhases } from "../../stores/right-panel/RightPanelStorePhases";
 import type ResizeNotifier from "../../utils/ResizeNotifier";
 import MessageComposer from "../views/rooms/MessageComposer";
+import { MessageSelectionArea } from "../views/rooms/MessageSelection/MessageSelectionArea";
 import { type RoomPermalinkCreator } from "../../utils/permalinks/Permalinks";
 import { Layout } from "../../settings/enums/Layout";
 import TimelinePanel from "./TimelinePanel";
@@ -443,15 +444,17 @@ export default class ThreadView extends React.Component<IProps, IState> {
                         )}
 
                         {this.state.thread?.timelineSet && (
-                            <MessageComposer
-                                room={this.props.room}
-                                resizeNotifier={this.props.resizeNotifier}
-                                relation={threadRelation}
-                                replyToEvent={this.state.replyToEvent}
-                                permalinkCreator={this.props.permalinkCreator}
-                                e2eStatus={this.props.e2eStatus}
-                                compact={true}
-                            />
+                            <MessageSelectionArea roomId={this.props.room.roomId} threadId={this.state.thread.id}>
+                                <MessageComposer
+                                    room={this.props.room}
+                                    resizeNotifier={this.props.resizeNotifier}
+                                    relation={threadRelation}
+                                    replyToEvent={this.state.replyToEvent}
+                                    permalinkCreator={this.props.permalinkCreator}
+                                    e2eStatus={this.props.e2eStatus}
+                                    compact={true}
+                                />
+                            </MessageSelectionArea>
                         )}
                     </BaseCard>
                 </RoomUploadContextProvider>
