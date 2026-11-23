@@ -15,6 +15,8 @@ import styles from "./EventTileView.module.css";
 
 type EventTileSlotName = keyof EventTileViewSlots;
 
+const noop = (): void => {};
+
 /**
  * Renders the common EventTile root and event-line structure.
  *
@@ -109,7 +111,8 @@ export function EventTileView({
         selection && (
             <div className={styles.selectionCheckbox} aria-hidden="true" data-testid="event-tile-selection-checkbox">
                 {selection.state !== "unavailable" && (
-                    <CheckboxInput checked={selection.state === "selected"} readOnly tabIndex={-1} />
+                    // The click bubbles up to the tile, which owns the toggle; the tile is also the keyboard stop.
+                    <CheckboxInput checked={selection.state === "selected"} onChange={noop} tabIndex={-1} />
                 )}
             </div>
         );
@@ -152,7 +155,6 @@ export function EventTileView({
                 [styles.shapeFile]: root.shape === "File",
                 [styles.shapeNotification]: root.shape === "Notification",
                 [styles.selectionMode]: !!selection,
-                [styles.selectionSelected]: selection?.state === "selected",
                 [styles.selectionUnavailable]: selection?.state === "unavailable",
             })}
             aria-live={root.ariaLive}
@@ -181,7 +183,13 @@ export function EventTileView({
                 <div className={classNames(styles.senderDetails, classNameOverrides?.senderDetails)} inert={inert}>
                     {renderSlots("avatar", "sender")}
                 </div>
-                <div id={root.id} data-testid="event-tile-line" inert={inert} className={lineClassName} onContextMenu={onContextMenu}>
+                <div
+                    id={root.id}
+                    data-testid="event-tile-line"
+                    inert={inert}
+                    className={lineClassName}
+                    onContextMenu={onContextMenu}
+                >
                     {renderSlots("contextMenu", "replyChain", "body", "actionBar", "timestamp", "receipt")}
                 </div>
                 {renderSlot("footer")}
@@ -244,7 +252,13 @@ export function EventTileView({
                         {renderSlots("avatar", "sender", "timestamp")}
                     </div>
                 </a>
-                <div id={root.id} data-testid="event-tile-line" inert={inert} className={lineClassName} onContextMenu={onContextMenu}>
+                <div
+                    id={root.id}
+                    data-testid="event-tile-line"
+                    inert={inert}
+                    className={lineClassName}
+                    onContextMenu={onContextMenu}
+                >
                     {renderSlots("contextMenu", "body")}
                 </div>
             </>,
@@ -259,7 +273,13 @@ export function EventTileView({
         return renderRoot(
             <>
                 {renderSlots("timestamp", "padlock", "avatar", "sender")}
-                <div id={root.id} data-testid="event-tile-line" inert={inert} className={lineClassName} onContextMenu={onContextMenu}>
+                <div
+                    id={root.id}
+                    data-testid="event-tile-line"
+                    inert={inert}
+                    className={lineClassName}
+                    onContextMenu={onContextMenu}
+                >
                     {renderSlots("contextMenu", "replyChain", "body", "actionBar", "footer", "threadInfo")}
                 </div>
                 {renderSlot("receipt")}
@@ -273,7 +293,13 @@ export function EventTileView({
     return renderRoot(
         <>
             {renderSlots("sender", "avatar")}
-            <div id={root.id} data-testid="event-tile-line" inert={inert} className={lineClassName} onContextMenu={onContextMenu}>
+            <div
+                id={root.id}
+                data-testid="event-tile-line"
+                inert={inert}
+                className={lineClassName}
+                onContextMenu={onContextMenu}
+            >
                 {renderSlots("contextMenu", "timestamp", "padlock", "replyChain", "body", "actionBar")}
             </div>
             {renderSlots("footer", "threadInfo", "receipt")}

@@ -19,6 +19,8 @@ import { _t } from "../../languageHandler";
 import RoomAvatar from "../../components/views/avatars/RoomAvatar";
 import DMRoomMap from "../../utils/DMRoomMap";
 import { sortRoomsByRecency } from "../../utils/room/sortRoomsByRecency";
+import { BreadcrumbsStore } from "../../stores/BreadcrumbsStore";
+import RoomListStoreV3 from "../../stores/room-list-v3/RoomListStoreV3";
 import { formatList } from "../../utils/FormattingUtils";
 
 /** The most chats messages can be forwarded to at once, as on Element X. */
@@ -30,8 +32,8 @@ export const MAX_FORWARD_DESTINATIONS = 5;
  */
 const SLOW_FORWARD_THRESHOLD = 10;
 
-/** How many chats to list before the user searches, as in the other chat pickers. */
-const UNFILTERED_ROOM_LIMIT = 8;
+/** How many recently viewed chats the "Suggestions" section shows. */
+const SUGGESTION_LIMIT = 5;
 
 export interface ForwardMessagesDialogViewSnapshot extends RoomPickerViewSnapshot {
     /** Whether Send can be pressed: at least one chat is selected. */
@@ -68,8 +70,10 @@ export class ForwardMessagesDialogViewModel
 {
     /** The chosen rooms, in the order they were chosen. */
     private readonly selectedRoomIds: string[] = [];
-    /** The rooms that can be chosen, most recent first. */
-    private readonly roomsByRecency: Room[];
+    /** Recently viewed rooms that can be chosen, most recently viewed first. At most {@link SUGGESTION_LIMIT}. */
+    private readonly suggestedRooms: Room[];
+    /** The other rooms that can be chosen, in room list order. */
+    private readonly chatRooms: Room[];
     private query = "";
 
     public constructor(props: ForwardMessagesDialogViewModelProps) {
@@ -81,10 +85,16 @@ export class ForwardMessagesDialogViewModel
             emptyListText: _t("forward|multi|empty"),
             canSend: false,
         });
-        this.roomsByRecency = sortRoomsByRecency(
-            props.matrixClient.getVisibleRooms().filter((room) => this.canForwardTo(room)),
-            props.matrixClient.getSafeUserId(),
-        );
+        this.suggestedRooms = BreadcrumbsStore.instance.rooms
+            .filter((room) => this.canForwardTo(room))
+            .slice(0, SUGGESTION_LIMIT);
+        const suggestedIds = new Set(this.suggestedRooms.map((room) => room.roomId));
+        // The room list's own order, across all spaces; by recency if the room list hasn't loaded.
+        const roomListRooms = RoomListStoreV3.instance.getSortedRooms();
+        const allRooms = roomListRooms.length
+            ? roomListRooms
+            : sortRoomsByRecency(props.matrixClient.getVisibleRooms(), props.matrixClient.getSafeUserId());
+        this.chatRooms = allRooms.filter((room) => !suggestedIds.has(room.roomId) && this.canForwardTo(room));
         this.disposables.track(() => this.search.cancel());
         this.refresh();
     }
@@ -116,8 +126,9 @@ export class ForwardMessagesDialogViewModel
 
     private refresh(): void {
         const query = this.query.toLocaleLowerCase();
-        let rooms = this.roomsByRecency.filter((room) => room.name.toLocaleLowerCase().includes(query));
-        if (!query) rooms = rooms.slice(0, UNFILTERED_ROOM_LIMIT);
+        const matches = (room: Room): boolean => room.name.toLocaleLowerCase().includes(query);
+        const suggestions = this.suggestedRooms.filter(matches).map((room) => this.toViewRoom(room));
+        const chats = this.chatRooms.filter(matches).map((room) => this.toViewRoom(room));
 
         const selectedRooms = this.selectedRoomIds
             .map((id) => this.props.matrixClient.getRoom(id))
@@ -126,7 +137,11 @@ export class ForwardMessagesDialogViewModel
         const count = selectedRooms.length;
 
         this.snapshot.merge({
-            rooms: rooms.map((room) => this.toViewRoom(room)),
+            rooms: [...suggestions, ...chats],
+            sections: [
+                { id: "suggestions", title: _t("forward|multi|suggestions"), rooms: suggestions },
+                { id: "chats", title: _t("forward|multi|chats"), rooms: chats },
+            ],
             selectedRooms: selectedRooms.map((room) => this.toViewRoom(room)),
             canSend: count > 0,
             limitText:

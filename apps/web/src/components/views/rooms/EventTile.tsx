@@ -965,7 +965,10 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
     private getSelectionState(): Pick<EventTileViewSelection, "state" | "tabbable"> | null {
         const { timelineRenderingType, threadId } = this.context;
         if (this.props.forExport) return null;
-        if (timelineRenderingType !== TimelineRenderingType.Room && timelineRenderingType !== TimelineRenderingType.Thread) {
+        if (
+            timelineRenderingType !== TimelineRenderingType.Room &&
+            timelineRenderingType !== TimelineRenderingType.Thread
+        ) {
             return null;
         }
         const store = SDKContextClass.instance.messageSelectionStore;
@@ -989,7 +992,8 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
     };
 
     private readonly onSelectionToggle = (ev: MouseEvent<HTMLElement>): void => {
-        ev.preventDefault();
+        // Let a click on the checkbox itself through; elsewhere the tile's content must not react.
+        if (!(ev.target instanceof HTMLInputElement && ev.target.type === "checkbox")) ev.preventDefault();
         ev.stopPropagation();
         const store = SDKContextClass.instance.messageSelectionStore;
         store.setFocused(this.props.mxEvent.getId()!);

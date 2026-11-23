@@ -12,6 +12,7 @@ import { PillInput } from "../pill-input/PillInput";
 import { Pill } from "../pill-input/Pill";
 import { RichList } from "../rich-list/RichList";
 import { RichItem } from "../rich-list/RichItem";
+import { RoomPickerSectionedList } from "./RoomPickerSectionedList";
 import { useViewModel, type ViewModel } from "../viewmodel";
 
 import styles from "./RoomPickerView.module.css";
@@ -32,6 +33,15 @@ export interface RoomOfRoomPickerView {
     disabled?: boolean;
 }
 
+export interface RoomPickerViewSection {
+    /** Unique identifier for the section. */
+    id: string;
+    /** Title shown above the section's rooms. */
+    title: string;
+    /** The rooms in the section, in the order to show them. */
+    rooms: RoomOfRoomPickerView[];
+}
+
 export interface RoomPickerViewSnapshot {
     /** List of rooms available for selection. */
     rooms: RoomOfRoomPickerView[];
@@ -43,6 +53,12 @@ export interface RoomPickerViewSnapshot {
     listTitle: string;
     /** Text displayed when the list of rooms is empty. */
     emptyListText: string;
+    /**
+     * Optional sections, each with its own title. When set, the list shows these instead of `rooms` under
+     * `listTitle`, and scrolls through all of them (it is virtualized). `rooms` should still hold every room
+     * shown, so the empty state works.
+     */
+    sections?: RoomPickerViewSection[];
 }
 
 export interface RoomPickerViewActions {
@@ -90,9 +106,20 @@ interface RoomPickerViewProps {
  * ```
  */
 export function RoomPickerView({ vm, className }: Readonly<RoomPickerViewProps>): JSX.Element {
-    const { rooms, selectedRooms, placeholder, listTitle, emptyListText } = useViewModel(vm);
+    const { rooms, selectedRooms, placeholder, listTitle, emptyListText, sections } = useViewModel(vm);
     const isListEmpty = rooms.length === 0;
     const inputRef = React.useRef<HTMLInputElement>(null);
+
+    const onRoomClick = React.useCallback(
+        (room: RoomOfRoomPickerView): void => {
+            vm.toggleRoom(room.id);
+
+            if (!inputRef.current) return;
+            inputRef.current.value = "";
+            inputRef.current?.focus();
+        },
+        [vm],
+    );
 
     return (
         <Flex gap="var(--cpd-space-4x)" direction="column" align="stretch" className={className}>
@@ -114,6 +141,13 @@ export function RoomPickerView({ vm, className }: Readonly<RoomPickerViewProps>)
                 <Text as="div" size="lg" className={classNames(styles.list, styles.emptyList)}>
                     {emptyListText}
                 </Text>
+            ) : sections ? (
+                <RoomPickerSectionedList
+                    sections={sections}
+                    label={listTitle}
+                    renderRoomAvatar={vm.renderRoomAvatar}
+                    onRoomClick={onRoomClick}
+                />
             ) : (
                 <RichList title={listTitle} className={styles.list}>
                     {rooms.map((room) => (
@@ -125,13 +159,7 @@ export function RoomPickerView({ vm, className }: Readonly<RoomPickerViewProps>)
                             avatar={vm.renderRoomAvatar(room, "32px")}
                             selected={room.selected}
                             disabled={room.disabled}
-                            onClick={() => {
-                                vm.toggleRoom(room.id);
-
-                                if (!inputRef.current) return;
-                                inputRef.current.value = "";
-                                inputRef.current?.focus();
-                            }}
+                            onClick={() => onRoomClick(room)}
                         />
                     ))}
                 </RichList>

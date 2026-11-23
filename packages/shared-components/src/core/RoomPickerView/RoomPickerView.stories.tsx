@@ -113,3 +113,26 @@ export const EmptyList: Story = {
         selectedRooms: [],
     },
 };
+
+const manyRooms: RoomOfRoomPickerView[] = Array.from({ length: 40 }, (_, i) => ({
+    id: `!chat${i}:matrix.org`,
+    name: `Chat ${i + 1}`,
+    description: `#chat${i + 1}:matrix.org`,
+    selected: i === 1,
+}));
+
+/**
+ * The list in sections, as the "Forward to" picker shows it: a few suggestions, then every other chat. The list
+ * is virtualized, so it scrolls through all of them.
+ */
+export const WithSections: Story = {
+    args: {
+        rooms: manyRooms,
+        selectedRooms: manyRooms.filter((room) => room.selected),
+        listTitle: "Chats",
+        sections: [
+            { id: "suggestions", title: "Suggestions", rooms: manyRooms.slice(0, 5) },
+            { id: "chats", title: "Chats", rooms: manyRooms.slice(5) },
+        ],
+    },
+};

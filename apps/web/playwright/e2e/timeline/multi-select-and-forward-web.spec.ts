@@ -32,10 +32,10 @@ const test = base.extend<{
 async function waitForEvent(app: ElementAppPage, roomId: string, eventId: string): Promise<void> {
     await expect
         .poll(() =>
-            app.client.evaluate(
-                (cli, { roomId, eventId }) => !!cli.getRoom(roomId)?.findEventById(eventId),
-                { roomId, eventId },
-            ),
+            app.client.evaluate((cli, { roomId, eventId }) => !!cli.getRoom(roomId)?.findEventById(eventId), {
+                roomId,
+                eventId,
+            }),
         )
         .toBe(true);
 }
@@ -51,7 +51,7 @@ async function receiveMessages(
     const ids: string[] = [];
     for (const body of bodies) {
         const content = threadId
-            ? { msgtype: "m.text", body, "m.relates_to": { rel_type: "m.thread", event_id: threadId } }
+            ? { "msgtype": "m.text", body, "m.relates_to": { rel_type: "m.thread", event_id: threadId } }
             : { msgtype: "m.text", body };
         const { event_id: eventId } = await bot.sendMessage(roomId, content);
         if (!threadId) await waitForEvent(app, roomId, eventId);
@@ -90,13 +90,19 @@ async function chooseForward(page: Page, scope: Locator, text: string): Promise<
     await page.getByRole("menuitem", { name: "Forward" }).click();
 }
 
-/** Choose chats in the "Forward to" picker by name. */
+/** Choose chats in the "Forward to" picker by name. The list is virtualized, so search for each one first. */
 async function pickChats(page: Page, names: string[]): Promise<Locator> {
     const dialog = page.getByRole("dialog", { name: "Forward to" });
     for (const name of names) {
+        await dialog.getByPlaceholder("Search chats").fill(name);
         await dialog.getByRole("option", { name, exact: true }).click();
     }
     return dialog;
+}
+
+/** The selection checkbox of a message. */
+function checkbox(messageTile: Locator): Locator {
+    return messageTile.getByTestId("event-tile-selection-checkbox").getByRole("checkbox", { includeHidden: true });
 }
 
 /** The text bodies at the end of a room's main timeline. */
@@ -167,6 +173,16 @@ test.describe("Multi-select and forward", () => {
         await expect(tile(timeline, "Message A")).toHaveAttribute("aria-selected", "false");
         await expect(selectionBar(page)).toContainText("1 selected");
         await tile(timeline, "Message A").click();
+        await expect(selectionBar(page)).toContainText("2 selected");
+
+        // Clicking the checkbox itself toggles the message too
+        await checkbox(tile(timeline, "Message D")).click();
+        await expect(tile(timeline, "Message D")).toHaveAttribute("aria-selected", "true");
+        await expect(checkbox(tile(timeline, "Message D"))).toBeChecked();
+        await expect(selectionBar(page)).toContainText("3 selected");
+        await checkbox(tile(timeline, "Message D")).click();
+        await expect(tile(timeline, "Message D")).toHaveAttribute("aria-selected", "false");
+        await expect(checkbox(tile(timeline, "Message D"))).not.toBeChecked();
         await expect(selectionBar(page)).toContainText("2 selected");
 
         for (const text of ["Lunch today?", "Message deleted", "A brand new topic"]) {
@@ -252,7 +268,11 @@ test.describe("Multi-select and forward", () => {
     }) => {
         const names = ["Dest 1", "Dest 2", "Dest 3", "Dest 4", "Dest 5", "Dest 6"];
         for (const name of names) await createDestination(app, name);
+        // More chats than fit in the picker, so it has to scroll
+        for (let i = 1; i <= 6; i++) await createDestination(app, `Other chat ${i}`);
         await receiveMessages(app, bot, sourceRoomId, ["Picker message one", "Picker message two"]);
+        // Dest 6 was viewed recently, so it is a suggestion
+        await app.viewRoomByName("Dest 6");
         await app.viewRoomByName(SOURCE);
         const timeline = mainTimeline(page);
 
@@ -264,6 +284,25 @@ test.describe("Multi-select and forward", () => {
         await expect(dialog).toBeVisible();
         await expect(dialog.getByRole("option", { name: SOURCE, exact: true })).toHaveCount(0);
         await expect(dialog.getByRole("button", { name: "Send" })).toBeDisabled();
+
+        // Two sections: recently viewed chats as suggestions, then the chats from the room list
+        const list = dialog.getByRole("listbox");
+        await expect(list.getByText("Suggestions", { exact: true })).toBeVisible();
+        await expect(list.getByText("Chats", { exact: true })).toBeVisible();
+        const suggestion = list.getByRole("option", { name: "Dest 6", exact: true });
+        await expect(suggestion).toBeVisible();
+        expect((await suggestion.boundingBox())!.y).toBeLessThan(
+            (await list.getByText("Chats", { exact: true }).boundingBox())!.y,
+        );
+        await expect(list.getByRole("option", { name: "Dest 6", exact: true })).toHaveCount(1);
+
+        // The list scrolls through every chat, down to the oldest one
+        const oldest = list.getByRole("option", { name: "Dest 1", exact: true });
+        for (let i = 0; i < 10 && !(await oldest.isVisible()); i++) {
+            await list.hover();
+            await page.mouse.wheel(0, 400);
+        }
+        await expect(oldest).toBeVisible();
 
         await pickChats(page, names.slice(0, 5));
         await expect(dialog.getByRole("option", { name: "Dest 6", exact: true })).toHaveAttribute(

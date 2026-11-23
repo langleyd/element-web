@@ -44,6 +44,8 @@ export interface RichItemProps extends HTMLAttributes<HTMLLIElement> {
      * @default false
      */
     disabled?: boolean;
+    /** Ref to the list item, for example to move focus to it. */
+    ref?: React.Ref<HTMLLIElement>;
 }
 
 /**
@@ -76,6 +78,8 @@ export const RichItem = memo(function RichItem({
     const i18n = useI18n();
 
     return (
+        // The list owns keyboard handling (RichList's listbox, or the caller's keydown handler).
+        // oxlint-disable-next-line jsx-a11y/click-events-have-key-events
         <li
             className={classNames(styles.richItem, { [styles.disabled]: disabled })}
             role="option"
