@@ -124,6 +124,7 @@ export function RoomPickerView({ vm, className }: Readonly<RoomPickerViewProps>)
     return (
         <Flex gap="var(--cpd-space-4x)" direction="column" align="stretch" className={className}>
             <PillInput
+                className={styles.pillInput}
                 onRemoveChildren={vm.unSelectLastRoom}
                 inputProps={{
                     ref: inputRef,
@@ -132,7 +133,12 @@ export function RoomPickerView({ vm, className }: Readonly<RoomPickerViewProps>)
                 }}
             >
                 {selectedRooms.map((room) => (
-                    <Pill key={room.id} label={room.name} onClick={() => vm.toggleRoom(room.id)}>
+                    <Pill
+                        key={room.id}
+                        label={room.name}
+                        className={styles.pill}
+                        onClick={() => vm.toggleRoom(room.id)}
+                    >
                         {vm.renderRoomAvatar(room, "20px")}
                     </Pill>
                 ))}

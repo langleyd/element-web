@@ -12,6 +12,8 @@ import { type Locator, type Page } from "@playwright/test";
 import { test as base, expect } from "../../element-web-test";
 import { type ElementAppPage } from "../../pages/ElementAppPage";
 import { type Bot } from "../../pages/bot";
+import { SettingLevel } from "../../../src/settings/SettingLevel";
+import { Layout } from "../../../src/settings/enums/Layout";
 
 const SOURCE = "Source chat";
 
@@ -135,6 +137,24 @@ test.describe("Multi-select and forward", () => {
         await expect(bar.getByRole("button", { name: "Cancel" })).toBeVisible();
         await expect(bar.getByRole("button", { name: "Forward" })).toBeEnabled();
         await expect(page.getByRole("textbox", { name: /Send an? .*message/ })).toHaveCount(0);
+        await bar.getByRole("button", { name: "Cancel" }).click();
+
+        // In the bubble layout, no avatar shows next to the checkboxes, on others' bubbles or on your own
+        const { event_id: ownId } = await app.client.sendMessage(sourceRoomId, "My own message");
+        await waitForEvent(app, sourceRoomId, ownId);
+        await app.settings.setValue("layout", null, SettingLevel.DEVICE, Layout.Bubble);
+        const timeline = mainTimeline(page);
+        await expect(tile(timeline, "First message").getByTestId("event-tile-slot-avatar")).toBeVisible();
+        await chooseForward(page, timeline, "Second message");
+        await expect(selectionBar(page)).toContainText("1 selected");
+        for (const text of ["First message", "Second message", "Third message", "My own message"]) {
+            await expect(checkbox(tile(timeline, text))).toBeVisible();
+        }
+        const avatars = timeline.locator("[data-selection-state] > [data-testid='event-tile-slot-avatar']");
+        await expect(avatars).not.toHaveCount(0);
+        for (const avatar of await avatars.all()) {
+            await expect(avatar).toBeHidden();
+        }
     });
 
     test("AC-2: Clicking messages toggles them; polls, deleted messages and room events can't be selected", async ({
@@ -283,13 +303,14 @@ test.describe("Multi-select and forward", () => {
         bot,
         sourceRoomId,
     }) => {
-        const names = ["Dest 1", "Dest 2", "Dest 3", "Dest 4", "Dest 5", "Dest 6"];
+        // Long names, so the chosen chats' pills fill more than one row of the search field
+        const names = [1, 2, 3, 4, 5, 6].map((i) => `Dest ${i}, the chat with a rather long name for the team`);
         for (const name of names) await createDestination(app, name);
         // More chats than fit in the picker, so it has to scroll
         for (let i = 1; i <= 6; i++) await createDestination(app, `Other chat ${i}`);
         await receiveMessages(app, bot, sourceRoomId, ["Picker message one", "Picker message two"]);
         // Dest 6 was viewed recently, so it is a suggestion
-        await app.viewRoomByName("Dest 6");
+        await app.viewRoomByName(names[5]);
         await app.viewRoomByName(SOURCE);
         const timeline = mainTimeline(page);
 
@@ -306,15 +327,15 @@ test.describe("Multi-select and forward", () => {
         const list = dialog.getByRole("listbox");
         await expect(list.getByText("Suggestions", { exact: true })).toBeVisible();
         await expect(list.getByText("Chats", { exact: true })).toBeVisible();
-        const suggestion = list.getByRole("option", { name: "Dest 6", exact: true });
+        const suggestion = list.getByRole("option", { name: names[5], exact: true });
         await expect(suggestion).toBeVisible();
         expect((await suggestion.boundingBox())!.y).toBeLessThan(
             (await list.getByText("Chats", { exact: true }).boundingBox())!.y,
         );
-        await expect(list.getByRole("option", { name: "Dest 6", exact: true })).toHaveCount(1);
+        await expect(list.getByRole("option", { name: names[5], exact: true })).toHaveCount(1);
 
         // The list scrolls through every chat, down to the oldest one
-        const oldest = list.getByRole("option", { name: "Dest 1", exact: true });
+        const oldest = list.getByRole("option", { name: names[0], exact: true });
         for (let i = 0; i < 10 && !(await oldest.isVisible()); i++) {
             await list.hover();
             await page.mouse.wheel(0, 400);
@@ -327,7 +348,7 @@ test.describe("Multi-select and forward", () => {
         await search.fill("Dest 6");
         await expect(list.getByText("Suggestions", { exact: true })).toHaveCount(0);
         await expect(list.getByText("Chats", { exact: true })).toBeVisible();
-        await expect(list.getByRole("option", { name: "Dest 6", exact: true })).toBeVisible();
+        await expect(list.getByRole("option", { name: names[5], exact: true })).toBeVisible();
         expect((await dialog.boundingBox())!.height).toBe(height);
         await search.fill("No chat is called this");
         await expect(dialog.getByText("No chats found")).toBeVisible();
@@ -343,7 +364,7 @@ test.describe("Multi-select and forward", () => {
         expect(Math.abs(buttonsCentre - (dialogBox.x + dialogBox.width / 2))).toBeLessThanOrEqual(2);
 
         await pickChats(page, names.slice(0, 5));
-        await expect(dialog.getByRole("option", { name: "Dest 6", exact: true })).toHaveAttribute(
+        await expect(dialog.getByRole("option", { name: names[5], exact: true })).toHaveAttribute(
             "aria-disabled",
             "true",
         );
@@ -352,6 +373,17 @@ test.describe("Multi-select and forward", () => {
         await expect(dialog.getByText(/will be sent to/)).toHaveCount(0);
         await expect(dialog.getByRole("button", { name: "Forward", exact: true })).toBeEnabled();
         expect((await dialog.boundingBox())!.height).toBe(height);
+        // The search field grows to hold every pill, so its placeholder stays inside its border
+        const fieldBox = (await search.locator("..").boundingBox())!;
+        const searchBox = (await search.boundingBox())!;
+        expect(searchBox.y).toBeGreaterThanOrEqual(fieldBox.y);
+        expect(searchBox.y + searchBox.height).toBeLessThanOrEqual(fieldBox.y + fieldBox.height);
+        expect(searchBox.x + searchBox.width).toBeLessThanOrEqual(fieldBox.x + fieldBox.width);
+        for (const name of names.slice(0, 5)) {
+            const pillBox = (await dialog.getByText(name, { exact: true }).first().boundingBox())!;
+            expect(pillBox.x + pillBox.width).toBeLessThanOrEqual(fieldBox.x + fieldBox.width);
+            expect(pillBox.y + pillBox.height).toBeLessThanOrEqual(fieldBox.y + fieldBox.height);
+        }
 
         // Cancelling the picker keeps the selection
         await dialog.getByRole("button", { name: "Cancel" }).click();

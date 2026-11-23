@@ -24,6 +24,7 @@
 .input {
     all: unset;
     width: 100%;
+    text-overflow: ellipsis;
     flex: 1;
     color: var(--cpd-color-text-primary);
 }

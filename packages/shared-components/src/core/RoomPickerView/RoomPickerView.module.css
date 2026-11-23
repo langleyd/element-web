@@ -12,6 +12,18 @@
     min-height: 0;
 }
 
+/* The search field keeps the height its pills and input need; the list below gives way instead. Without this, chats
+   with long names wrap the pills onto more rows than the field has room for, and the input spills out of it. */
+.pillInput {
+    flex-shrink: 0;
+}
+
+/* A chat with a long name is cut short in its pill, so one pill is never wider than the field. */
+.pill {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
 .emptyList {
     color: var(--cpd-color-text-secondary);
 }

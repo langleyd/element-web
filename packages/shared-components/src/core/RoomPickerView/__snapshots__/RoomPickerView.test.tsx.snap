@@ -7,7 +7,7 @@ exports[`RoomPickerView > Storybook snapshots > renders the empty state when the
     style="--mx-flex-display: flex; --mx-flex-direction: column; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-4x); --mx-flex-wrap: nowrap;"
   >
     <div
-      class="Flex-module_flex PillInput-module_pillInput"
+      class="Flex-module_flex PillInput-module_pillInput RoomPickerView-module_pillInput"
       style="--mx-flex-display: flex; --mx-flex-direction: column; --mx-flex-align: start; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-2x); --mx-flex-wrap: nowrap;"
     >
       <input
@@ -32,7 +32,7 @@ exports[`RoomPickerView > Storybook snapshots > renders the list of rooms 1`] = 
     style="--mx-flex-display: flex; --mx-flex-direction: column; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-4x); --mx-flex-wrap: nowrap;"
   >
     <div
-      class="Flex-module_flex PillInput-module_pillInput"
+      class="Flex-module_flex PillInput-module_pillInput RoomPickerView-module_pillInput"
       style="--mx-flex-display: flex; --mx-flex-direction: column; --mx-flex-align: start; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-2x); --mx-flex-wrap: nowrap;"
     >
       <div
@@ -40,7 +40,7 @@ exports[`RoomPickerView > Storybook snapshots > renders the list of rooms 1`] = 
         style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-2x); --mx-flex-wrap: wrap;"
       >
         <div
-          class="Flex-module_flex Pill-module_pill"
+          class="Flex-module_flex Pill-module_pill RoomPickerView-module_pill"
           style="--mx-flex-display: inline-flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
         >
           <div
@@ -222,7 +222,7 @@ exports[`RoomPickerView > Storybook snapshots > renders the list without any sel
     style="--mx-flex-display: flex; --mx-flex-direction: column; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-4x); --mx-flex-wrap: nowrap;"
   >
     <div
-      class="Flex-module_flex PillInput-module_pillInput"
+      class="Flex-module_flex PillInput-module_pillInput RoomPickerView-module_pillInput"
       style="--mx-flex-display: flex; --mx-flex-direction: column; --mx-flex-align: start; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-2x); --mx-flex-wrap: nowrap;"
     >
       <input
