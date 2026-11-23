@@ -33,8 +33,6 @@ export async function forwardSelectedMessages(cli: MatrixClient, store: MessageS
     const { finished } = Modal.createDialog(ForwardMessagesDialog, {
         matrixClient: cli,
         sourceRoomId: roomId,
-        messageCount: events.length,
-        fromThread: !!threadId,
     });
     const [roomIds] = await finished;
     if (!roomIds?.length) return;

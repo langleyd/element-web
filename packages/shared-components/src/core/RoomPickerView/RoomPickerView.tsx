@@ -138,7 +138,12 @@ export function RoomPickerView({ vm, className }: Readonly<RoomPickerViewProps>)
                 ))}
             </PillInput>
             {isListEmpty ? (
-                <Text as="div" size="lg" className={classNames(styles.list, styles.emptyList)}>
+                // With sections, the empty list keeps the list's height, so the picker doesn't shrink.
+                <Text
+                    as="div"
+                    size="lg"
+                    className={classNames(styles.list, styles.emptyList, { [styles.sectionedList]: !!sections })}
+                >
                     {emptyListText}
                 </Text>
             ) : sections ? (

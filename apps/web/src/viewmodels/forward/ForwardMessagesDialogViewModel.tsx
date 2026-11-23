@@ -21,16 +21,9 @@ import DMRoomMap from "../../utils/DMRoomMap";
 import { sortRoomsByRecency } from "../../utils/room/sortRoomsByRecency";
 import { BreadcrumbsStore } from "../../stores/BreadcrumbsStore";
 import RoomListStoreV3 from "../../stores/room-list-v3/RoomListStoreV3";
-import { formatList } from "../../utils/FormattingUtils";
 
 /** The most chats messages can be forwarded to at once, as on Element X. */
 export const MAX_FORWARD_DESTINATIONS = 5;
-
-/**
- * Above this many sends, a default Synapse starts slowing the client down (about 10 messages, then one every
- * 5 seconds), so the summary warns that the forward may take a few minutes.
- */
-const SLOW_FORWARD_THRESHOLD = 10;
 
 /** How many recently viewed chats the "Suggestions" section shows. */
 const SUGGESTION_LIMIT = 5;
@@ -40,12 +33,6 @@ export interface ForwardMessagesDialogViewSnapshot extends RoomPickerViewSnapsho
     canSend: boolean;
     /** Shown when 5 chats are selected and the rest are disabled. Provisional until the design review. */
     limitText?: string;
-    /** How many messages go to which chats, shown before Send. Provisional until the design review. */
-    summaryText?: string;
-    /** For messages from a thread: they arrive in the main chat. Provisional until the design review. */
-    threadText?: string;
-    /** For large forwards: it may take a few minutes. Provisional until the design review. */
-    slowText?: string;
 }
 
 interface ForwardMessagesDialogViewModelProps {
@@ -53,10 +40,6 @@ interface ForwardMessagesDialogViewModelProps {
     matrixClient: MatrixClient;
     /** The room the messages come from. It is not offered. */
     sourceRoomId: string;
-    /** How many messages are being forwarded. */
-    messageCount: number;
-    /** Whether the messages come from a thread. */
-    fromThread: boolean;
     /** Called with the chosen room ids on Send, or with nothing on Cancel. */
     onFinished: (roomIds?: string[]) => void;
 }
@@ -72,8 +55,8 @@ export class ForwardMessagesDialogViewModel
     private readonly selectedRoomIds: string[] = [];
     /** Recently viewed rooms that can be chosen, most recently viewed first. At most {@link SUGGESTION_LIMIT}. */
     private readonly suggestedRooms: Room[];
-    /** The other rooms that can be chosen, in room list order. */
-    private readonly chatRooms: Room[];
+    /** Every room that can be chosen, in room list order. */
+    private readonly allRooms: Room[];
     private query = "";
 
     public constructor(props: ForwardMessagesDialogViewModelProps) {
@@ -88,13 +71,13 @@ export class ForwardMessagesDialogViewModel
         this.suggestedRooms = BreadcrumbsStore.instance.rooms
             .filter((room) => this.canForwardTo(room))
             .slice(0, SUGGESTION_LIMIT);
-        const suggestedIds = new Set(this.suggestedRooms.map((room) => room.roomId));
         // The room list's own order, across all spaces; by recency if the room list hasn't loaded.
         const roomListRooms = RoomListStoreV3.instance.getSortedRooms();
-        const allRooms = roomListRooms.length
-            ? roomListRooms
-            : sortRoomsByRecency(props.matrixClient.getVisibleRooms(), props.matrixClient.getSafeUserId());
-        this.chatRooms = allRooms.filter((room) => !suggestedIds.has(room.roomId) && this.canForwardTo(room));
+        this.allRooms = (
+            roomListRooms.length
+                ? roomListRooms
+                : sortRoomsByRecency(props.matrixClient.getVisibleRooms(), props.matrixClient.getSafeUserId())
+        ).filter((room) => this.canForwardTo(room));
         this.disposables.track(() => this.search.cancel());
         this.refresh();
     }
@@ -125,22 +108,30 @@ export class ForwardMessagesDialogViewModel
     }
 
     private refresh(): void {
-        const query = this.query.toLocaleLowerCase();
-        const matches = (room: Room): boolean => room.name.toLocaleLowerCase().includes(query);
-        const suggestions = this.suggestedRooms.filter(matches).map((room) => this.toViewRoom(room));
-        const chats = this.chatRooms.filter(matches).map((room) => this.toViewRoom(room));
+        let suggestions: Room[] = [];
+        let chats: Room[];
+        if (this.query) {
+            // Searching: every match is listed once, under "Chats", in room list order.
+            const query = this.query.toLocaleLowerCase();
+            chats = this.allRooms.filter((room) => room.name.toLocaleLowerCase().includes(query));
+        } else {
+            suggestions = this.suggestedRooms;
+            const suggestedIds = new Set(suggestions.map((room) => room.roomId));
+            chats = this.allRooms.filter((room) => !suggestedIds.has(room.roomId));
+        }
+        const suggestionRooms = suggestions.map((room) => this.toViewRoom(room));
+        const chatRooms = chats.map((room) => this.toViewRoom(room));
 
         const selectedRooms = this.selectedRoomIds
             .map((id) => this.props.matrixClient.getRoom(id))
             .filter((room): room is Room => !!room);
-        const { messageCount, fromThread } = this.props;
         const count = selectedRooms.length;
 
         this.snapshot.merge({
-            rooms: [...suggestions, ...chats],
+            rooms: [...suggestionRooms, ...chatRooms],
             sections: [
-                { id: "suggestions", title: _t("forward|multi|suggestions"), rooms: suggestions },
-                { id: "chats", title: _t("forward|multi|chats"), rooms: chats },
+                { id: "suggestions", title: _t("forward|multi|suggestions"), rooms: suggestionRooms },
+                { id: "chats", title: _t("forward|multi|chats"), rooms: chatRooms },
             ],
             selectedRooms: selectedRooms.map((room) => this.toViewRoom(room)),
             canSend: count > 0,
@@ -148,15 +139,6 @@ export class ForwardMessagesDialogViewModel
                 count >= MAX_FORWARD_DESTINATIONS
                     ? _t("forward|multi|limit", { count: MAX_FORWARD_DESTINATIONS })
                     : undefined,
-            summaryText:
-                count > 0
-                    ? _t("forward|multi|summary", {
-                          count: messageCount,
-                          chats: formatList(selectedRooms.map((room) => room.name)),
-                      })
-                    : undefined,
-            threadText: count > 0 && fromThread ? _t("forward|multi|from_thread") : undefined,
-            slowText: count > 0 && messageCount * count > SLOW_FORWARD_THRESHOLD ? _t("forward|multi|slow") : undefined,
         });
     }
 

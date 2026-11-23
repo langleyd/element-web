@@ -158,19 +158,21 @@ export function RoomPickerSectionedList({
 
     return (
         <div className={styles.sectionedList}>
-            <GroupedVirtualizedList<RoomPickerViewSection, RoomOfRoomPickerView, Context>
-                {...getContainerAccessibleProps("listbox")}
-                aria-label={label}
-                aria-multiselectable={true}
-                groups={groups}
-                context={context}
-                getItemKey={getItemKey}
-                getHeaderKey={getHeaderKey}
-                isItemFocusable={isItemFocusable}
-                isGroupHeaderFocusable={isGroupHeaderFocusable}
-                getGroupHeaderComponent={getGroupHeaderComponent}
-                getItemComponent={getItemComponent}
-            />
+            <div className={styles.sectionedListContent}>
+                <GroupedVirtualizedList<RoomPickerViewSection, RoomOfRoomPickerView, Context>
+                    {...getContainerAccessibleProps("listbox")}
+                    aria-label={label}
+                    aria-multiselectable={true}
+                    groups={groups}
+                    context={context}
+                    getItemKey={getItemKey}
+                    getHeaderKey={getHeaderKey}
+                    isItemFocusable={isItemFocusable}
+                    isGroupHeaderFocusable={isGroupHeaderFocusable}
+                    getGroupHeaderComponent={getGroupHeaderComponent}
+                    getItemComponent={getItemComponent}
+                />
+            </div>
         </div>
     );
 }

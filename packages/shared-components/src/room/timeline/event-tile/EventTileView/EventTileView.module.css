@@ -1863,9 +1863,11 @@
 /* Selection mode: each selectable tile shows a checkbox and the whole tile is the click target.
    Modern layout: the checkbox takes the avatar's place. IRC: it is a new first column, before the avatar and
    name. Bubbles: it sits in a column on the start side, as own messages put their avatar on the other side.
+   In every layout the checkbox is centred vertically on the tile, so it lines up with the whole message
+   (sender, body, reactions and thread summary) rather than with the sender's name.
    A selected tile has no tint of its own: the ticked checkbox is the mark. */
 .root.selectionMode {
-    /* The avatar's box in the modern layout, which the checkbox takes over. */
+    /* The avatar's column in the modern layout, which the checkbox takes over. */
     --event-tile-selection-avatar-size: 30px;
 
     cursor: pointer;
@@ -1892,23 +1894,16 @@
         > .selectionCheckbox {
             position: absolute;
             z-index: 9;
-            inset-block-start: 14px;
+            inset-block: 0;
             inset-inline-start: var(--cpd-space-2x);
             width: var(--event-tile-selection-avatar-size);
-            height: var(--event-tile-selection-avatar-size);
-        }
-
-        /* Without a sender line, line the checkbox up with the first line of the message. */
-        &.stateContinuation > .selectionCheckbox {
-            inset-block-start: var(--event-tile-group-line-spacing-block-start);
-            height: var(--event-tile-group-line-height);
         }
     }
 
     &.layoutIrc > .selectionCheckbox {
         flex: 0 0 auto;
+        align-self: stretch;
         width: var(--cpd-space-6x);
-        height: var(--event-tile-irc-slot-height);
         margin-inline-end: var(--cpd-space-3x);
     }
 
@@ -1919,14 +1914,11 @@
 
         > .selectionCheckbox {
             position: absolute;
-            inset-block-start: 0;
+            inset-block: 0;
             inset-inline-start: calc(
                 -1 * (var(--event-tile-bubble-margin-inline-start) + var(--event-tile-selection-gutter))
             );
             width: var(--event-tile-selection-gutter);
-            box-sizing: border-box;
-            padding-block-start: inherit;
-            align-items: flex-start;
         }
     }
 }

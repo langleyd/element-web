@@ -165,6 +165,13 @@ test.describe("Multi-select and forward", () => {
         await chooseForward(page, mainTimeline(page), "Message A");
         const timeline = mainTimeline(page);
 
+        // The checkbox is centred on the message, not lined up with the sender's name
+        const firstTile = (await tile(timeline, "Message A").boundingBox())!;
+        const firstBox = (await checkbox(tile(timeline, "Message A")).boundingBox())!;
+        expect(Math.abs(firstBox.y + firstBox.height / 2 - (firstTile.y + firstTile.height / 2))).toBeLessThanOrEqual(
+            2,
+        );
+
         // Messages that are not next to each other
         await tile(timeline, "Message C").click();
         await expect(tile(timeline, "Message C")).toHaveAttribute("aria-selected", "true");
@@ -260,7 +267,7 @@ test.describe("Multi-select and forward", () => {
         expect(await lastBodies(page, 1)).toEqual(["A message that arrives while selecting"]);
     });
 
-    test("AC-5: The Forward to picker takes up to 5 chats, explains the limit and summarises the send", async ({
+    test("AC-5: The Forward to picker takes up to 5 chats and explains the limit", async ({
         page,
         app,
         bot,
@@ -304,14 +311,37 @@ test.describe("Multi-select and forward", () => {
         }
         await expect(oldest).toBeVisible();
 
+        // Searching lists every match under Chats, including a suggested chat, and the dialog keeps its height
+        const height = (await dialog.boundingBox())!.height;
+        const search = dialog.getByPlaceholder("Search chats");
+        await search.fill("Dest 6");
+        await expect(list.getByText("Suggestions", { exact: true })).toHaveCount(0);
+        await expect(list.getByText("Chats", { exact: true })).toBeVisible();
+        await expect(list.getByRole("option", { name: "Dest 6", exact: true })).toBeVisible();
+        expect((await dialog.boundingBox())!.height).toBe(height);
+        await search.fill("No chat is called this");
+        await expect(dialog.getByText("No chats found")).toBeVisible();
+        expect((await dialog.boundingBox())!.height).toBe(height);
+        await search.fill("");
+
+        // Cancel and Send share the row equally, centred in the dialog
+        const cancelBox = (await dialog.getByRole("button", { name: "Cancel" }).boundingBox())!;
+        const sendBox = (await dialog.getByRole("button", { name: "Send" }).boundingBox())!;
+        const dialogBox = (await dialog.boundingBox())!;
+        expect(Math.abs(cancelBox.width - sendBox.width)).toBeLessThanOrEqual(1);
+        const buttonsCentre = (cancelBox.x + sendBox.x + sendBox.width) / 2;
+        expect(Math.abs(buttonsCentre - (dialogBox.x + dialogBox.width / 2))).toBeLessThanOrEqual(2);
+
         await pickChats(page, names.slice(0, 5));
         await expect(dialog.getByRole("option", { name: "Dest 6", exact: true })).toHaveAttribute(
             "aria-disabled",
             "true",
         );
         await expect(dialog.getByText("You can forward to up to 5 chats at a time.")).toBeVisible();
-        await expect(dialog.getByText(/2 messages will be sent to Dest .*Dest 5\./)).toBeVisible();
+        // No summary of what will be sent: the chosen chats show in the search field
+        await expect(dialog.getByText(/will be sent to/)).toHaveCount(0);
         await expect(dialog.getByRole("button", { name: "Send" })).toBeEnabled();
+        expect((await dialog.boundingBox())!.height).toBe(height);
 
         // Cancelling the picker keeps the selection
         await dialog.getByRole("button", { name: "Cancel" }).click();
@@ -344,7 +374,6 @@ test.describe("Multi-select and forward", () => {
         await bar.getByRole("button", { name: "Forward" }).click();
 
         const dialog = await pickChats(page, ["Thread destination"]);
-        await expect(dialog.getByText("They will arrive in the main chat, not in a thread.")).toBeVisible();
         await dialog.getByRole("button", { name: "Send" }).click();
 
         await expect(page.getByRole("banner").getByText("Thread destination")).toBeVisible();

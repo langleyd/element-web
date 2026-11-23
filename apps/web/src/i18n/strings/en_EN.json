@@ -1289,19 +1289,13 @@
         "multi": {
             "chats": "Chats",
             "empty": "No chats found",
-            "from_thread": "They will arrive in the main chat, not in a thread.",
             "limit": {
                 "one": "You can forward to up to %(count)s chat at a time.",
                 "other": "You can forward to up to %(count)s chats at a time."
             },
             "list_title": "Chats to forward to",
             "search_placeholder": "Search chats",
-            "slow": "This may take a few minutes. You can keep chatting meanwhile.",
             "suggestions": "Suggestions",
-            "summary": {
-                "one": "%(count)s message will be sent to %(chats)s.",
-                "other": "%(count)s messages will be sent to %(chats)s."
-            },
             "title": "Forward to"
         },
         "no_perms_title": "You don't have permission to do this",

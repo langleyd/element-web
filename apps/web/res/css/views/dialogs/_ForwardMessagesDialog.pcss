@@ -8,12 +8,23 @@
 .mx_ForwardMessagesDialog {
     color: var(--cpd-color-text-primary);
 
+    /* A fixed height, as for the invite dialog: the list fills what the search field and buttons leave, so the
+       dialog doesn't shrink when a search finds few or no chats. */
+    display: flex;
+    flex-direction: column;
+    height: min(600px, 70vh);
+
     &.mx_Dialog_fixedWidth {
         max-width: calc(576px - var(--cpd-space-20x));
     }
 
     .mx_Dialog_header {
         margin-bottom: var(--cpd-space-6x);
+    }
+
+    .mx_ForwardMessagesDialog_picker {
+        flex: 1;
+        min-height: 0;
     }
 
     .mx_ForwardMessagesDialog_notes {
@@ -29,5 +40,14 @@
 
     .mx_ForwardMessagesDialog_limit {
         color: var(--cpd-color-text-secondary);
+    }
+
+    /* Cancel and Send share the row equally, so the pair is centred under the list. A grid rather than flex, so
+       the outlined Cancel's border doesn't make it wider than Send. */
+    .mx_ForwardMessagesDialog_buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--cpd-space-4x);
+        margin-block-start: var(--cpd-space-6x);
     }
 }

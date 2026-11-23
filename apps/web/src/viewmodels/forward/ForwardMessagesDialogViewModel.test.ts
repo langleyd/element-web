@@ -55,8 +55,6 @@ describe("ForwardMessagesDialogViewModel", () => {
         return new ForwardMessagesDialogViewModel({
             matrixClient: client,
             sourceRoomId: SOURCE_ID,
-            messageCount: 2,
-            fromThread: false,
             onFinished: vi.fn(),
         });
     }
@@ -81,28 +79,33 @@ describe("ForwardMessagesDialogViewModel", () => {
         expect(vm.getSnapshot().rooms.map((room) => room.id)).not.toContain(SOURCE_ID);
     });
 
-    it("filters both sections when searching", () => {
+    it("lists every match under Chats when searching, suggested or not, in room list order", () => {
         vi.useFakeTimers();
         const vm = createViewModel();
         vm.search("Chat 1");
         vi.runAllTimers();
         const [suggestions, chats] = vm.getSnapshot().sections!;
 
-        expect(suggestions.rooms.map((room) => room.name)).toEqual([
-            "Chat 10",
-            "Chat 11",
-            "Chat 12",
-            "Chat 13",
-            "Chat 14",
-        ]);
+        expect(suggestions.rooms).toHaveLength(0);
         expect(chats.rooms.map((room) => room.name)).toEqual([
             "Chat 1",
-            "Chat 15",
-            "Chat 16",
-            "Chat 17",
-            "Chat 18",
-            "Chat 19",
+            ...Array.from({ length: 10 }, (_, i) => `Chat ${10 + i}`),
         ]);
+
+        // Clearing the search brings the suggestions back.
+        vm.search("");
+        vi.runAllTimers();
+        expect(vm.getSnapshot().sections![0].rooms).toHaveLength(5);
         vi.useRealTimers();
+    });
+
+    it("has no send summary, only the limit line once 5 chats are chosen", () => {
+        const vm = createViewModel();
+        for (const room of rooms.slice(0, 5)) vm.toggleRoom(room.roomId);
+        const snapshot = vm.getSnapshot();
+
+        expect(snapshot.limitText).toBe("You can forward to up to 5 chats at a time.");
+        expect(snapshot).not.toHaveProperty("summaryText");
+        expect(snapshot.canSend).toBe(true);
     });
 });

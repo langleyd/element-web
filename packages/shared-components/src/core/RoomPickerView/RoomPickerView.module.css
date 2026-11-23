@@ -16,10 +16,18 @@
     color: var(--cpd-color-text-secondary);
 }
 
-/* The sectioned list is virtualized, so it needs a height of its own to scroll within. */
+/* The sectioned list is virtualized, so it needs a height of its own to scroll within: 360px, or whatever the
+   picker's container gives it. The list is placed inside it so its height doesn't depend on what it shows. */
 .sectionedList {
+    position: relative;
     width: 100%;
-    height: 360px;
+    flex: 1 1 360px;
+    min-height: 0;
+}
+
+.sectionedListContent {
+    position: absolute;
+    inset: 0;
 }
 
 .sectionTitle {
