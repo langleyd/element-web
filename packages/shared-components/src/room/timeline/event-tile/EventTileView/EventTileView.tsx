@@ -117,6 +117,15 @@ export function EventTileView({
             </div>
         );
 
+    // In the group and bubble layouts the checkbox goes inside the line, so it sits on the line where the message
+    // starts rather than next to the sender's name above it. While selecting, the line itself is not inert (each
+    // slot in it is), so the checkbox can still be clicked. Own bubbles are right-aligned, so their checkbox stays on
+    // the tile, in the start column. IRC puts the name on the message's first line, so its checkbox is a column of
+    // the tile.
+    const checkboxInLine = !!selection && layout !== "irc" && !(layout === "bubble" && root.state.isOwnEvent);
+    const lineInert = checkboxInLine ? undefined : inert;
+    const lineContextMenu = selection ? undefined : onContextMenu;
+
     const renderRoot = (
         children: React.ReactNode,
         rootClickHandler: React.MouseEventHandler<HTMLElement> | undefined,
@@ -171,7 +180,7 @@ export function EventTileView({
             onClick={selection ? selection.onToggle : rootClickHandler}
             {...selectionProps}
         >
-            {renderSelectionCheckbox()}
+            {!checkboxInLine && renderSelectionCheckbox()}
             {children}
         </Root>
     );
@@ -186,10 +195,11 @@ export function EventTileView({
                 <div
                     id={root.id}
                     data-testid="event-tile-line"
-                    inert={inert}
+                    inert={lineInert}
                     className={lineClassName}
-                    onContextMenu={onContextMenu}
+                    onContextMenu={lineContextMenu}
                 >
+                    {checkboxInLine && renderSelectionCheckbox()}
                     {renderSlots("contextMenu", "replyChain", "body", "actionBar", "timestamp", "receipt")}
                 </div>
                 {renderSlot("footer")}
@@ -296,10 +306,11 @@ export function EventTileView({
             <div
                 id={root.id}
                 data-testid="event-tile-line"
-                inert={inert}
+                inert={lineInert}
                 className={lineClassName}
-                onContextMenu={onContextMenu}
+                onContextMenu={lineContextMenu}
             >
+                {checkboxInLine && renderSelectionCheckbox()}
                 {renderSlots("contextMenu", "timestamp", "padlock", "replyChain", "body", "actionBar")}
             </div>
             {renderSlots("footer", "threadInfo", "receipt")}

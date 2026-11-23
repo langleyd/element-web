@@ -1863,8 +1863,9 @@
 /* Selection mode: each selectable tile shows a checkbox and the whole tile is the click target.
    Modern layout: the checkbox takes the avatar's place. IRC: it is a new first column, before the avatar and
    name. Bubbles: it sits in a column on the start side, as own messages put their avatar on the other side.
-   In every layout the checkbox is centred vertically on the tile, so it lines up with the whole message
-   (sender, body, reactions and thread summary) rather than with the sender's name.
+   In every layout the checkbox sits on the line where the message starts, not next to the sender's name above
+   it. In the modern and bubble layouts it is rendered inside the line and left at its static block position,
+   so it follows the line wherever the sender, reply or layout puts it; its height is one line of the message.
    A selected tile has no tint of its own: the ticked checkbox is the mark. */
 .root.selectionMode {
     /* The avatar's column in the modern layout, which the checkbox takes over. */
@@ -1883,6 +1884,14 @@
         border-radius: var(--cpd-space-2x);
     }
 
+    /* Inside the line: no block offsets, so the box starts at the top of the line's content, one line high. */
+    .line > .selectionCheckbox {
+        position: absolute;
+        z-index: 9;
+        align-self: flex-start;
+        block-size: 1lh;
+    }
+
     &.layoutGroup {
         /* The checkbox replaces the avatar; a tile that can't be selected keeps its avatar. The hover timestamp
            would sit on top of the checkbox, so it is hidden too. */
@@ -1891,18 +1900,17 @@
             visibility: hidden;
         }
 
-        > .selectionCheckbox {
-            position: absolute;
-            z-index: 9;
-            inset-block: 0;
+        .line > .selectionCheckbox {
             inset-inline-start: var(--cpd-space-2x);
             width: var(--event-tile-selection-avatar-size);
         }
     }
 
+    /* The IRC sender shares the message's first line, so the checkbox matches that line's height. */
     &.layoutIrc > .selectionCheckbox {
         flex: 0 0 auto;
-        align-self: stretch;
+        align-self: flex-start;
+        height: var(--event-tile-irc-slot-height);
         width: var(--cpd-space-6x);
         margin-inline-end: var(--cpd-space-3x);
     }
@@ -1912,9 +1920,21 @@
 
         margin-inline-start: calc(var(--event-tile-bubble-margin-inline-start) + var(--event-tile-selection-gutter));
 
+        /* Inside the line, measured from the bubble's start edge. */
+        .line > .selectionCheckbox {
+            inset-inline-start: calc(
+                -1 * (var(--event-tile-bubble-margin-inline-start) + var(--event-tile-selection-gutter)) -
+                    var(--event-tile-bubble-line-margin-inline-start)
+            );
+            width: var(--event-tile-selection-gutter);
+        }
+
+        /* Own bubbles are right-aligned and have no sender above them: the checkbox is on the tile, level with the
+           bubble's first line. */
         > .selectionCheckbox {
             position: absolute;
-            inset-block: 0;
+            inset-block-start: 0;
+            height: calc(2 * (var(--event-tile-bubble-gutter) - 1px) + var(--event-tile-bubble-line-height));
             inset-inline-start: calc(
                 -1 * (var(--event-tile-bubble-margin-inline-start) + var(--event-tile-selection-gutter))
             );

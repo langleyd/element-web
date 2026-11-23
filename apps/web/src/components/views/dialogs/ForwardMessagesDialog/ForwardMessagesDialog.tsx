@@ -19,12 +19,12 @@ interface ForwardMessagesDialogProps {
     matrixClient: MatrixClient;
     /** The room the messages come from. */
     sourceRoomId: string;
-    /** Called with the chosen room ids on Send, or with nothing on Cancel. */
+    /** Called with the chosen room ids on Forward, or with nothing on Cancel. */
     onFinished: (roomIds?: string[]) => void;
 }
 
 /**
- * The "Forward to" picker for forwarding several messages: up to 5 chats, then Send.
+ * The "Forward to" picker for forwarding several messages: up to 5 chats, then Forward.
  * It keeps the same height whatever the list holds, so it doesn't jump while the user searches.
  */
 export function ForwardMessagesDialog({ onFinished, ...props }: ForwardMessagesDialogProps): JSX.Element {
@@ -51,7 +51,7 @@ export function ForwardMessagesDialog({ onFinished, ...props }: ForwardMessagesD
                     {_t("action|cancel")}
                 </Button>
                 <Button size="lg" kind="primary" disabled={!canSend} onClick={vm.send}>
-                    {_t("forward|send_label")}
+                    {_t("action|forward")}
                 </Button>
             </div>
         </BaseDialog>

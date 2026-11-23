@@ -130,6 +130,8 @@ test.describe("Multi-select and forward", () => {
 
         const bar = selectionBar(page);
         await expect(bar).toContainText("1 selected");
+        // The bar takes the composer's place at a fixed height
+        expect((await bar.boundingBox())!.height).toBe(85);
         await expect(bar.getByRole("button", { name: "Cancel" })).toBeVisible();
         await expect(bar.getByRole("button", { name: "Forward" })).toBeEnabled();
         await expect(page.getByRole("textbox", { name: /Send an? .*message/ })).toHaveCount(0);
@@ -165,12 +167,20 @@ test.describe("Multi-select and forward", () => {
         await chooseForward(page, mainTimeline(page), "Message A");
         const timeline = mainTimeline(page);
 
-        // The checkbox is centred on the message, not lined up with the sender's name
-        const firstTile = (await tile(timeline, "Message A").boundingBox())!;
-        const firstBox = (await checkbox(tile(timeline, "Message A")).boundingBox())!;
-        expect(Math.abs(firstBox.y + firstBox.height / 2 - (firstTile.y + firstTile.height / 2))).toBeLessThanOrEqual(
-            2,
-        );
+        // The checkbox is on the line where the message starts, not next to the sender's name above it
+        const messageA = tile(timeline, "Message A");
+        const senderName = messageA.getByTestId("event-tile-slot-sender").getByText("Bob");
+        await expect(senderName).toBeVisible();
+        const nameBox = (await senderName.boundingBox())!;
+        for (const text of ["Message A", "Message B"]) {
+            const messageTile = tile(timeline, text);
+            const bodyBox = (await messageTile.getByTestId("event-tile-slot-body").getByText(text).boundingBox())!;
+            const box = (await checkbox(messageTile).boundingBox())!;
+            const centre = box.y + box.height / 2;
+            expect(Math.abs(centre - (bodyBox.y + bodyBox.height / 2))).toBeLessThanOrEqual(3);
+        }
+        const boxA = (await checkbox(messageA).boundingBox())!;
+        expect(boxA.y + boxA.height / 2).toBeGreaterThan(nameBox.y + nameBox.height);
 
         // Messages that are not next to each other
         await tile(timeline, "Message C").click();
@@ -290,7 +300,7 @@ test.describe("Multi-select and forward", () => {
         const dialog = page.getByRole("dialog", { name: "Forward to" });
         await expect(dialog).toBeVisible();
         await expect(dialog.getByRole("option", { name: SOURCE, exact: true })).toHaveCount(0);
-        await expect(dialog.getByRole("button", { name: "Send" })).toBeDisabled();
+        await expect(dialog.getByRole("button", { name: "Forward", exact: true })).toBeDisabled();
 
         // Two sections: recently viewed chats as suggestions, then the chats from the room list
         const list = dialog.getByRole("listbox");
@@ -324,9 +334,9 @@ test.describe("Multi-select and forward", () => {
         expect((await dialog.boundingBox())!.height).toBe(height);
         await search.fill("");
 
-        // Cancel and Send share the row equally, centred in the dialog
+        // Cancel and Forward share the row equally, centred in the dialog
         const cancelBox = (await dialog.getByRole("button", { name: "Cancel" }).boundingBox())!;
-        const sendBox = (await dialog.getByRole("button", { name: "Send" }).boundingBox())!;
+        const sendBox = (await dialog.getByRole("button", { name: "Forward", exact: true }).boundingBox())!;
         const dialogBox = (await dialog.boundingBox())!;
         expect(Math.abs(cancelBox.width - sendBox.width)).toBeLessThanOrEqual(1);
         const buttonsCentre = (cancelBox.x + sendBox.x + sendBox.width) / 2;
@@ -340,7 +350,7 @@ test.describe("Multi-select and forward", () => {
         await expect(dialog.getByText("You can forward to up to 5 chats at a time.")).toBeVisible();
         // No summary of what will be sent: the chosen chats show in the search field
         await expect(dialog.getByText(/will be sent to/)).toHaveCount(0);
-        await expect(dialog.getByRole("button", { name: "Send" })).toBeEnabled();
+        await expect(dialog.getByRole("button", { name: "Forward", exact: true })).toBeEnabled();
         expect((await dialog.boundingBox())!.height).toBe(height);
 
         // Cancelling the picker keeps the selection
@@ -374,7 +384,7 @@ test.describe("Multi-select and forward", () => {
         await bar.getByRole("button", { name: "Forward" }).click();
 
         const dialog = await pickChats(page, ["Thread destination"]);
-        await dialog.getByRole("button", { name: "Send" }).click();
+        await dialog.getByRole("button", { name: "Forward", exact: true }).click();
 
         await expect(page.getByRole("banner").getByText("Thread destination")).toBeVisible();
         await expect(tile(mainTimeline(page), "Thread three")).toBeVisible();
@@ -393,7 +403,7 @@ test.describe("Multi-select and forward", () => {
         await tile(timeline, "Toast message two").click();
         await selectionBar(page).getByRole("button", { name: "Forward" }).click();
         let dialog = await pickChats(page, ["Only destination", "Second destination"]);
-        await dialog.getByRole("button", { name: "Send" }).click();
+        await dialog.getByRole("button", { name: "Forward", exact: true }).click();
         await expect(page.getByText("2 messages forwarded", { exact: true }).first()).toBeVisible();
         await expect(page.getByRole("banner").getByText(SOURCE)).toBeVisible();
         await expect(page.getByRole("textbox", { name: /Send an? .*message/ })).toBeFocused();
@@ -402,7 +412,7 @@ test.describe("Multi-select and forward", () => {
         await chooseForward(page, timeline, "Toast message one");
         await selectionBar(page).getByRole("button", { name: "Forward" }).click();
         dialog = await pickChats(page, ["Only destination"]);
-        await dialog.getByRole("button", { name: "Send" }).click();
+        await dialog.getByRole("button", { name: "Forward", exact: true }).click();
         await expect(page.getByRole("banner").getByText("Only destination")).toBeVisible();
         await expect(tile(mainTimeline(page), "Toast message one")).toBeVisible();
     });
@@ -427,7 +437,7 @@ test.describe("Multi-select and forward", () => {
         await chooseForward(page, mainTimeline(page), "Message that fails at first");
         await selectionBar(page).getByRole("button", { name: "Forward" }).click();
         const dialog = await pickChats(page, ["Failing destination"]);
-        await dialog.getByRole("button", { name: "Send" }).click();
+        await dialog.getByRole("button", { name: "Forward", exact: true }).click();
 
         await expect(page.getByRole("banner").getByText("Failing destination")).toBeVisible();
         await expect(page.getByText("Some of your messages have not been sent")).toBeVisible();
@@ -506,7 +516,7 @@ test.describe("Multi-select and forward", () => {
         await expect(option).toBeFocused();
         await page.keyboard.press("Enter");
         await expect(option).toHaveAttribute("aria-selected", "true");
-        const send = dialog.getByRole("button", { name: "Send" });
+        const send = dialog.getByRole("button", { name: "Forward", exact: true });
         for (let i = 0; i < 6 && !(await send.evaluate((el) => el === document.activeElement)); i++) {
             await page.keyboard.press("Tab");
         }

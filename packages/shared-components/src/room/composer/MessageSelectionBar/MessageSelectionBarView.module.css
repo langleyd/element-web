@@ -9,8 +9,11 @@
     display: flex;
     align-items: center;
     gap: var(--cpd-space-3x);
-    padding: var(--cpd-space-4x) var(--cpd-space-6x);
-    border-top: 1px solid var(--cpd-color-border-interactive-secondary);
+    /* Fixed height per design, including the top border; the content is centred within it. */
+    box-sizing: border-box;
+    block-size: 85px;
+    padding: 0 var(--cpd-space-6x);
+    border-top: 1px solid var(--cpd-color-separator-primary);
     background: var(--cpd-color-bg-canvas-default);
 }
 
