@@ -1867,10 +1867,19 @@
    In every layout the checkbox sits on the line where the message starts, not next to the sender's name above
    it. In the modern and bubble layouts it is rendered inside the line and left at its static block position,
    so it follows the line wherever the sender, reply or layout puts it; its height is one line of the message.
-   A selected tile has no tint of its own: the ticked checkbox is the mark. */
+   No tile is tinted while selecting, whether selected, hovered or focused: the ticked checkbox is the mark, and
+   focus is the outline below. */
 .root.selectionMode {
     /* The avatar's column in the modern layout, which the checkbox takes over. */
     --event-tile-selection-avatar-size: 30px;
+    /* Compound's checkbox. */
+    --event-tile-selection-checkbox-size: 20px;
+    /* Important: these styles are in a cascade layer, and the app's theme sets these colours on .mx_EventTile outside
+       any layer, which would otherwise win. */
+    --event-tile-state-hover-background: transparent !important;
+    --event-tile-state-selected-background: transparent !important;
+    --event-tile-state-marker-color: transparent !important;
+    --event-tile-bubble-hover-background: transparent !important;
 
     cursor: pointer;
 
@@ -1918,8 +1927,19 @@
 
     &.layoutBubble {
         --event-tile-selection-gutter: 40px;
+        /* From the checkbox to the start of someone else's bubble. */
+        --event-tile-selection-bubble-gap: var(--cpd-space-4x);
 
         margin-inline-start: calc(var(--event-tile-bubble-margin-inline-start) + var(--event-tile-selection-gutter));
+
+        /* Others' bubbles start one gap after their checkbox, which stays in the start column, level with the
+           checkboxes of your own bubbles. */
+        &:not(.stateOwnEvent) {
+            margin-inline-start: calc(
+                (var(--event-tile-selection-gutter) + var(--event-tile-selection-checkbox-size)) / 2 +
+                    var(--event-tile-selection-bubble-gap) - var(--event-tile-bubble-line-margin-inline-start)
+            );
+        }
 
         /* No avatars while selecting, on any tile: the checkboxes take the start column, and the sender's name is
            enough to tell whose bubble it is. Hidden rather than removed, so the tiles keep their height. */
@@ -1930,10 +1950,9 @@
         /* Inside the line, measured from the bubble's start edge. */
         .line > .selectionCheckbox {
             inset-inline-start: calc(
-                -1 * (var(--event-tile-bubble-margin-inline-start) + var(--event-tile-selection-gutter)) -
-                    var(--event-tile-bubble-line-margin-inline-start)
+                -1 * (var(--event-tile-selection-checkbox-size) + var(--event-tile-selection-bubble-gap))
             );
-            width: var(--event-tile-selection-gutter);
+            width: var(--event-tile-selection-checkbox-size);
         }
 
         /* Own bubbles are right-aligned and have no sender above them: the checkbox is on the tile, level with the

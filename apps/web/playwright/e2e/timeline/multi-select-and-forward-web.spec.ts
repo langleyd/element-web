@@ -145,6 +145,9 @@ test.describe("Multi-select and forward", () => {
         await app.settings.setValue("layout", null, SettingLevel.DEVICE, Layout.Bubble);
         const timeline = mainTimeline(page);
         await expect(tile(timeline, "First message").getByTestId("event-tile-slot-avatar")).toBeVisible();
+        const bubbleLine = (text: string): Locator => tile(timeline, text).getByTestId("event-tile-line");
+        const bubbleXBefore = (await bubbleLine("First message").boundingBox())!.x;
+        const ownBubbleXBefore = (await bubbleLine("My own message").boundingBox())!.x;
         await chooseForward(page, timeline, "Second message");
         await expect(selectionBar(page)).toContainText("1 selected");
         for (const text of ["First message", "Second message", "Third message", "My own message"]) {
@@ -155,6 +158,26 @@ test.describe("Multi-select and forward", () => {
         for (const avatar of await avatars.all()) {
             await expect(avatar).toBeHidden();
         }
+
+        // Others' bubbles start 16px after their checkbox; your own bubbles don't move
+        for (const text of ["First message", "Second message", "Third message"]) {
+            const box = (await tile(timeline, text).getByTestId("event-tile-selection-checkbox").boundingBox())!;
+            const lineBox = (await bubbleLine(text).boundingBox())!;
+            expect(Math.abs(lineBox.x - (box.x + box.width) - 16)).toBeLessThanOrEqual(1);
+        }
+        expect((await bubbleLine("My own message").boundingBox())!.x).toBe(ownBubbleXBefore);
+
+        // The selected, hovered bubble has no background behind it
+        const selectedBubble = tile(timeline, "Second message");
+        await selectedBubble.hover();
+        expect(await selectedBubble.evaluate((el) => getComputedStyle(el, "::before").backgroundColor)).toBe(
+            "rgba(0, 0, 0, 0)",
+        );
+
+        // Leaving selection mode puts the bubbles back where they were
+        await selectionBar(page).getByRole("button", { name: "Cancel" }).click();
+        await expect(selectionBar(page)).toHaveCount(0);
+        expect((await bubbleLine("First message").boundingBox())!.x).toBe(bubbleXBefore);
     });
 
     test("AC-2: Clicking messages toggles them; polls, deleted messages and room events can't be selected", async ({
@@ -206,6 +229,13 @@ test.describe("Multi-select and forward", () => {
         await tile(timeline, "Message C").click();
         await expect(tile(timeline, "Message C")).toHaveAttribute("aria-selected", "true");
         await expect(selectionBar(page)).toContainText("2 selected");
+        // A selected message has no background, even while it is hovered and focused
+        for (const text of ["Message A", "Message C"]) {
+            await expect(tile(timeline, text).getByTestId("event-tile-line")).toHaveCSS(
+                "background-color",
+                "rgba(0, 0, 0, 0)",
+            );
+        }
         await tile(timeline, "Message A").click();
         await expect(tile(timeline, "Message A")).toHaveAttribute("aria-selected", "false");
         await expect(selectionBar(page)).toContainText("1 selected");
@@ -305,7 +335,8 @@ test.describe("Multi-select and forward", () => {
     }) => {
         // Long names, so the chosen chats' pills fill more than one row of the search field
         const names = [1, 2, 3, 4, 5, 6].map((i) => `Dest ${i}, the chat with a rather long name for the team`);
-        for (const name of names) await createDestination(app, name);
+        const destIds: string[] = [];
+        for (const name of names) destIds.push(await createDestination(app, name));
         // More chats than fit in the picker, so it has to scroll
         for (let i = 1; i <= 6; i++) await createDestination(app, `Other chat ${i}`);
         await receiveMessages(app, bot, sourceRoomId, ["Picker message one", "Picker message two"]);
@@ -333,6 +364,13 @@ test.describe("Multi-select and forward", () => {
             (await list.getByText("Chats", { exact: true }).boundingBox())!.y,
         );
         await expect(list.getByRole("option", { name: names[5], exact: true })).toHaveCount(1);
+        // Every chat shows its id under its name (room ids in recent room versions have no server part)
+        await expect(suggestion).toContainText(destIds[5]);
+        const options = list.getByRole("option");
+        await expect(options).not.toHaveCount(0);
+        for (const option of await options.all()) {
+            await expect(option).toContainText(/[!#@]\S+/);
+        }
 
         // The list scrolls through every chat, down to the oldest one
         const oldest = list.getByRole("option", { name: names[0], exact: true });

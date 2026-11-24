@@ -101,7 +101,8 @@ export class ForwardMessagesDialogViewModel
         return {
             id: room.roomId,
             name: room.name,
-            description: dmUserId ?? room.getCanonicalAlias() ?? "",
+            // Every row shows an id under its name: the person's for a DM, the room's address, or its room id.
+            description: dmUserId ?? room.getCanonicalAlias() ?? room.roomId,
             selected,
             disabled: !selected && this.selectedRoomIds.length >= MAX_FORWARD_DESTINATIONS,
         };

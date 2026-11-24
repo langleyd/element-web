@@ -99,6 +99,19 @@ describe("ForwardMessagesDialogViewModel", () => {
         vi.useRealTimers();
     });
 
+    it("shows an id under every chat's name: the person's for a DM, else the address, else the room id", () => {
+        vi.spyOn(rooms[1], "getCanonicalAlias").mockReturnValue("#chat1:server");
+        DMRoomMap.setShared({
+            getUserIdForRoomId: (id: string) => (id === "!room2:server" ? "@bob:server" : undefined),
+        } as unknown as DMRoomMap);
+        const vm = createViewModel();
+        const byId = new Map(vm.getSnapshot().rooms.map((room) => [room.id, room.description]));
+
+        expect(byId.get("!room0:server")).toBe("!room0:server");
+        expect(byId.get("!room1:server")).toBe("#chat1:server");
+        expect(byId.get("!room2:server")).toBe("@bob:server");
+    });
+
     it("has no send summary, only the limit line once 5 chats are chosen", () => {
         const vm = createViewModel();
         for (const room of rooms.slice(0, 5)) vm.toggleRoom(room.roomId);
