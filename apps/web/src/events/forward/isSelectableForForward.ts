@@ -36,3 +36,13 @@ export function isSelectableForForward(event: MatrixEvent): boolean {
     if (event.getType() !== EventType.RoomMessage) return false;
     return SELECTABLE_MSGTYPES.has(event.getContent().msgtype ?? "");
 }
+
+const TEXT_MSGTYPES = new Set<string>([MsgType.Text, MsgType.Emote, MsgType.Notice]);
+
+/**
+ * Whether a message is only text, rather than media (image, video, audio, file) or a location.
+ * In selection mode a text message has its checkbox on the line where the text starts, and media has it centred.
+ */
+export function isTextMessage(event: MatrixEvent): boolean {
+    return event.getType() === EventType.RoomMessage && TEXT_MSGTYPES.has(event.getContent().msgtype ?? "");
+}

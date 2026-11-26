@@ -1864,9 +1864,10 @@
    Modern layout: the checkbox takes the avatar's place. IRC: it is a new first column, before the avatar and
    name. Bubbles: it sits in a column on the start side, as own messages put their avatar on the other side, and
    no tile shows its avatar.
-   In every layout the checkbox sits on the line where the message starts, not next to the sender's name above
+   For a text message the checkbox sits on the line where the message starts, not next to the sender's name above
    it. In the modern and bubble layouts it is rendered inside the line and left at its static block position,
    so it follows the line wherever the sender, reply or layout puts it; its height is one line of the message.
+   For a media message (image, video, audio, file, location) it is centred on the content instead.
    No tile is tinted while selecting, whether selected, hovered or focused: the ticked checkbox is the mark, and
    focus is the outline below. */
 .root.selectionMode {
@@ -1902,6 +1903,14 @@
         block-size: 1lh;
     }
 
+    /* Media: the box spans the line's height, and the checkbox is centred in it. Stretch, as an absolutely
+       positioned box is aligned too. */
+    &.selectionCentred .line > .selectionCheckbox {
+        inset-block: 0;
+        align-self: stretch;
+        block-size: auto;
+    }
+
     &.layoutGroup {
         /* The checkbox replaces the avatar; a tile that can't be selected keeps its avatar. The hover timestamp
            would sit on top of the checkbox, so it is hidden too. */
@@ -1923,6 +1932,11 @@
         height: var(--event-tile-irc-slot-height);
         width: var(--cpd-space-6x);
         margin-inline-end: var(--cpd-space-3x);
+    }
+
+    &.layoutIrc.selectionCentred > .selectionCheckbox {
+        align-self: stretch;
+        height: auto;
     }
 
     &.layoutBubble {
@@ -1965,6 +1979,13 @@
                 -1 * (var(--event-tile-bubble-margin-inline-start) + var(--event-tile-selection-gutter))
             );
             width: var(--event-tile-selection-gutter);
+        }
+
+        /* Own media bubbles: centred on the tile. */
+        &.selectionCentred > .selectionCheckbox {
+            inset-block: 0;
+            align-self: stretch;
+            height: auto;
         }
     }
 }

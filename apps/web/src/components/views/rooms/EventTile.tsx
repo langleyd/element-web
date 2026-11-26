@@ -117,7 +117,7 @@ import { shouldHighlightEventTile } from "../../../viewmodels/room/timeline/even
 import { shouldHideEventTile } from "../../../viewmodels/room/timeline/event-tile/EventTileVisibilityState";
 import { UnreadNotificationBadgeViewModel } from "../../../viewmodels/room/notification-badge/UnreadNotificationBadgeViewModel";
 import { SDKContextClass } from "../../../contexts/SDKContextClass";
-import { isSelectableForForward } from "../../../events/forward/isSelectableForForward";
+import { isSelectableForForward, isTextMessage } from "../../../events/forward/isSelectableForForward";
 import { textForEvent } from "../../../TextForEvent";
 import { onSelectionTileKeyDown, registerSelectionTile } from "./MessageSelection/selectionKeyboard";
 
@@ -1060,6 +1060,7 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
         const selection: EventTileViewSelection | undefined = selectionState
             ? {
                   ...selectionState,
+                  align: isTextMessage(this.props.mxEvent) ? "start" : "center",
                   label: this.getSelectionLabel(),
                   onToggle: this.onSelectionToggle,
                   onKeyDown: this.onSelectionKeyDown,

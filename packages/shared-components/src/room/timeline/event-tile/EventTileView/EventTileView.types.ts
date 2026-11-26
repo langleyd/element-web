@@ -184,6 +184,11 @@ export interface EventTileViewSelection {
     label: string;
     /** Whether the tile is the list's tab stop (roving tabindex). */
     tabbable: boolean;
+    /**
+     * Where the checkbox sits against the message: level with the line where a text message starts, or centred on
+     * the content of a media message (image, video, audio, file, location). Defaults to "start".
+     */
+    align?: "start" | "center";
     /** Click anywhere on the tile. */
     onToggle: React.MouseEventHandler<HTMLElement>;
     /** Keyboard handling for the list (arrows, Space, Escape). */

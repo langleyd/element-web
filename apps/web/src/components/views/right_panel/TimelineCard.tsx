@@ -20,6 +20,7 @@ import { KnownMembership } from "matrix-js-sdk/src/types";
 import BaseCard from "./BaseCard";
 import type ResizeNotifier from "../../../utils/ResizeNotifier";
 import MessageComposer from "../rooms/MessageComposer";
+import { MessageSelectionArea } from "../rooms/MessageSelection/MessageSelectionArea";
 import { type RoomPermalinkCreator } from "../../../utils/permalinks/Permalinks";
 import { Layout } from "../../../settings/enums/Layout";
 import TimelinePanel from "../../structures/TimelinePanel";
@@ -249,16 +250,20 @@ export default class TimelineCard extends React.Component<IProps, IState> {
 
                         {isUploading && <UploadBar room={this.props.room} relation={this.props.composerRelation} />}
 
+                        {/* The chat beside a call or in a video room is the room's main timeline, so selecting
+                            messages there works as in the room view: the selection bar replaces this composer. */}
                         {showComposer && (
-                            <MessageComposer
-                                room={this.props.room}
-                                relation={this.props.composerRelation}
-                                resizeNotifier={this.props.resizeNotifier}
-                                replyToEvent={this.state.replyToEvent}
-                                permalinkCreator={this.props.permalinkCreator}
-                                e2eStatus={this.props.e2eStatus}
-                                compact={true}
-                            />
+                            <MessageSelectionArea roomId={this.props.room.roomId} threadId={null}>
+                                <MessageComposer
+                                    room={this.props.room}
+                                    relation={this.props.composerRelation}
+                                    resizeNotifier={this.props.resizeNotifier}
+                                    replyToEvent={this.state.replyToEvent}
+                                    permalinkCreator={this.props.permalinkCreator}
+                                    e2eStatus={this.props.e2eStatus}
+                                    compact={true}
+                                />
+                            </MessageSelectionArea>
                         )}
                     </RoomUploadContextProvider>
                 </BaseCard>

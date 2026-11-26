@@ -14,8 +14,10 @@ import { type ElementAppPage } from "../../pages/ElementAppPage";
 import { type Bot } from "../../pages/bot";
 import { SettingLevel } from "../../../src/settings/SettingLevel";
 import { Layout } from "../../../src/settings/enums/Layout";
+import { readSampleFileSync } from "../../sample-files";
 
 const SOURCE = "Source chat";
+const IMAGE_FILE = readSampleFileSync("element.png", null);
 
 const test = base.extend<{
     sourceRoomId: string;
@@ -204,8 +206,18 @@ test.describe("Multi-select and forward", () => {
         await bot.redactEvent(sourceRoomId, deletedId);
         await app.client.sendStateEvent(sourceRoomId, "m.room.topic", { topic: "A brand new topic" });
         await receiveMessages(app, bot, sourceRoomId, ["Message C", "Message D"]);
+        const upload = await bot.uploadContent(IMAGE_FILE, { name: "element.png", type: "image/png" });
+        const { event_id: imageId } = await bot.sendMessage(sourceRoomId, {
+            msgtype: "m.image",
+            body: "element.png",
+            url: upload.content_uri,
+            info: { w: 512, h: 512, mimetype: "image/png" },
+        });
+        await waitForEvent(app, sourceRoomId, imageId);
         await app.viewRoomByName(SOURCE);
         await expect(tile(mainTimeline(page), "Message deleted")).toBeVisible();
+        const imageTile = mainTimeline(page).locator(`[data-testid="event-tile"][data-event-id="${imageId}"]`);
+        await expect(imageTile.getByRole("img", { name: "element.png" })).toBeVisible();
 
         await chooseForward(page, mainTimeline(page), "Message A");
         const timeline = mainTimeline(page);
@@ -224,6 +236,15 @@ test.describe("Multi-select and forward", () => {
         }
         const boxA = (await checkbox(messageA).boundingBox())!;
         expect(boxA.y + boxA.height / 2).toBeGreaterThan(nameBox.y + nameBox.height);
+
+        // A media message has its checkbox centred on the content, not on its first line
+        const imageBox = (await imageTile.getByRole("img", { name: "element.png" }).boundingBox())!;
+        expect(imageBox.height).toBeGreaterThan(60);
+        const imageCheckbox = (await checkbox(imageTile).boundingBox())!;
+        const imageBodyBox = (await imageTile.getByTestId("event-tile-slot-body").boundingBox())!;
+        expect(
+            Math.abs(imageCheckbox.y + imageCheckbox.height / 2 - (imageBodyBox.y + imageBodyBox.height / 2)),
+        ).toBeLessThanOrEqual(4);
 
         // Messages that are not next to each other
         await tile(timeline, "Message C").click();
@@ -459,6 +480,51 @@ test.describe("Multi-select and forward", () => {
         await expect(page.getByRole("banner").getByText("Thread destination")).toBeVisible();
         await expect(tile(mainTimeline(page), "Thread three")).toBeVisible();
         expect(await lastBodies(page, 3)).toEqual(["Thread one", "Thread two", "Thread three"]);
+
+        // The chat in the right panel of a video room (or beside a call) works the same way
+        await app.settings.setValue("feature_video_rooms", null, SettingLevel.DEVICE, true);
+        await page.getByTestId("room-list-header").getByRole("button", { name: "New" }).click();
+        await page.getByRole("menuitem", { name: "New video room" }).click();
+        await page.getByRole("textbox", { name: "Name" }).fill("Video chat");
+        await page.getByRole("button", { name: "Create video room" }).click();
+        await app.viewRoomByName("Video chat");
+        const videoRoomId = await app.getCurrentRoomIdFromUrl();
+        // Wait for the room to be set up (encryption and its call widget) before sending to it
+        await expect
+            .poll(() =>
+                app.client.evaluate((cli, id) => {
+                    const state = cli.getRoom(id)?.currentState;
+                    return (
+                        !!state?.getStateEvents("m.room.encryption", "") &&
+                        (state?.getStateEvents("im.vector.modular.widgets").length ?? 0) > 0
+                    );
+                }, videoRoomId),
+            )
+            .toBe(true);
+        for (const body of ["Chat one", "Chat two", "Chat three"]) {
+            const { event_id: eventId } = await app.client.sendMessage(videoRoomId, { msgtype: "m.text", body });
+            await waitForEvent(app, videoRoomId, eventId);
+        }
+        const chat = page.locator(".mx_RightPanel .mx_TimelineCard");
+        // The chat opens by itself when the room has unread messages
+        if (!(await chat.isVisible()))
+            await page.locator(".mx_RoomHeader").getByRole("button", { name: "Chat" }).click();
+        await expect(tile(chat, "Chat three")).toBeVisible();
+
+        await chooseForward(page, chat, "Chat three");
+        await expect(chat.getByRole("listbox")).toBeVisible();
+        await tile(chat, "Chat one").click();
+        await tile(chat, "Chat two").click();
+        const chatBar = chat.getByRole("toolbar", { name: "Selected messages" });
+        await expect(chatBar).toContainText("3 selected");
+        await chatBar.getByRole("button", { name: "Forward" }).click();
+
+        const chatDialog = await pickChats(page, ["Thread destination"]);
+        await chatDialog.getByRole("button", { name: "Forward", exact: true }).click();
+
+        await expect(page.getByRole("banner").getByText("Thread destination")).toBeVisible();
+        await expect(tile(mainTimeline(page), "Chat three")).toBeVisible();
+        expect(await lastBodies(page, 3)).toEqual(["Chat one", "Chat two", "Chat three"]);
     });
 
     test("AC-7: One chat opens it; two or more stay here with a toast", async ({ page, app, bot, sourceRoomId }) => {

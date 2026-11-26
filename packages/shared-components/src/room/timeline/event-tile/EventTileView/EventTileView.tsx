@@ -165,6 +165,7 @@ export function EventTileView({
                 [styles.shapeNotification]: root.shape === "Notification",
                 [styles.selectionMode]: !!selection,
                 [styles.selectionUnavailable]: selection?.state === "unavailable",
+                [styles.selectionCentred]: selection?.align === "center",
             })}
             aria-live={root.ariaLive}
             aria-atomic={true}
